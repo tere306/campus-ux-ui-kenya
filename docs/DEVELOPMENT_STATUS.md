@@ -23,12 +23,13 @@ Alias estable en Supabase:
 
 Estado actual:
 
-- versión de desarrollo: **56**
-- SHA-256: `8a068f7ecf9804dcca1190ba62eeeb55f2df03f2210cb01e542bf272997aebbb`
+- versión de desarrollo: **57**
+- SHA-256: `dcc85e599801d1f5f8e2eedee1c770bc0363f8c4fe9704457154e02332b80016`
 - v53: identidad dinámica y progreso por UUID.
 - v54: caché local asociada a la cuenta y purga al cerrar sesión.
 - v55: los enlaces de invitación dejan de copiar la URL del preview y apuntan exclusivamente al dominio de producción.
 - v56: aviso explícito en preview para no enviar el enlace de activación antes de publicar la release.
+- v57: frontend y backend quedan alineados en el formato de invitación; solo se aceptan códigos hexadecimales de 24 caracteres.
 
 Existe una Edge Function de preview separada de producción. El preview está protegido por clave, `noindex`, `no-store`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` restrictiva, `Cross-Origin-Resource-Policy: same-origin` y CSP específica. La clave de preview se rotó durante la auditoría y no se versiona.
 
@@ -53,7 +54,7 @@ Existe una Edge Function de preview separada de producción. El preview está pr
 - Emisión bloqueada en backend si la ficha no está confirmada.
 - Snapshot del certificado sin email/teléfono.
 - Verificador público `verify_master_certificate_v2` limitado a nombre, programa, finalización, estado y código.
-- Verificador legacy deshabilitado para `anon` y `authenticated`.
+- Verificador legacy deshabilitado para `anon` y `authenticated`; su helper privado legacy tampoco conserva ejecución pública.
 
 ### Invitaciones de alumnas · 14U
 
@@ -67,10 +68,11 @@ Existe una Edge Function de preview separada de producción. El preview está pr
 - RLS de invitaciones acotada al rol Admin del programa.
 - Endpoint público no devuelve `user_id` ni detalles innecesarios.
 - En preview, el enlace compartible ya no incluye la clave del preview: siempre se genera contra producción y se muestra una advertencia mientras la release no esté publicada.
-- El endpoint de activación limita payload a 4 KiB y exige códigos nuevos de 24 hex; la compatibilidad con códigos antiguos de 12 se retiró porque no había invitaciones activas dependientes de ese formato.
+- El endpoint de activación limita payload a 4 KiB y exige códigos nuevos de 24 hex.
 - La matrícula ya no se concede únicamente por coincidencia de email: el trigger exige un hash de invitación incluido en `app_metadata` por la Edge Function después de validar el código.
 - Si la cuenta Auth se crea pero la matrícula no queda aceptada, la Edge Function elimina la cuenta recién creada para evitar huérfanas.
 - `admin_create_student_invite_v2` es ahora `SECURITY INVOKER`; la autorización depende de rol Admin + RLS. También permite reutilizar correctamente una invitación cancelada.
+- v57 elimina del frontend la validación legacy de códigos de 12 caracteres para que el mensaje al usuario coincida con el contrato real del backend.
 
 ### Identidad dinámica y progreso · 14V
 
@@ -84,7 +86,7 @@ Existe una Edge Function de preview separada de producción. El preview está pr
 
 ### Privacidad de caché local · 14W
 
-- La sesión Auth ya estaba en `sessionStorage`; se mantiene así.
+- La sesión Auth usa `sessionStorage`.
 - La caché académica local queda asociada al usuario autenticado mediante `LOCAL_CACHE_OWNER_KEY`.
 - Si se detecta un propietario de caché distinto, se descartan las copias locales antes de hidratar la nueva cuenta.
 - Al cerrar sesión se eliminan estado, recuperación y backups locales sensibles y no se vuelve a persistir el estado anterior.
@@ -107,18 +109,31 @@ Existe una Edge Function de preview separada de producción. El preview está pr
 - Única función `public` ejecutable por `anon`: `verify_master_certificate_v2(text)`.
 - Una cuenta sin invitación/matrícula/rol no obtiene acceso académico.
 - `academy_frontend_assets`, `academy_frontend_chunks` y `academy_frontend_releases`: sin lectura anónima; acceso administrativo autenticado según RLS.
-- `academy_backend_meta`: el login solo puede leer las columnas mínimas `product_id`, `schema_version`, `curriculum_version`, `status`, `updated_at`; `notes` ya no es legible por `anon` ni por el rol genérico `authenticated`.
+- `anon` ya no tiene permisos de INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER sobre tablas públicas ni permisos sobre secuencias.
+- `anon` tampoco conserva SELECT a nivel de tabla: únicamente 5 permisos de columna sobre `academy_backend_meta` para la pantalla de acceso.
+- `academy_backend_meta`: el login solo puede leer `product_id`, `schema_version`, `curriculum_version`, `status`, `updated_at`; `notes` no es legible por `anon` ni por el rol genérico `authenticated`.
+- El verificador público de certificados sigue funcionando con ese cierre de permisos y un código inválido devuelve solo `valid:false / status:not_found`.
+
+### Recuperación de contraseña
+
+- El frontend implementa solicitud de recuperación contra `/auth/v1/recover`.
+- La redirección se fija al origen de producción mediante `recoveryRedirectUrl()`.
+- Admite token hash `type=recovery` y sesión de recuperación en hash.
+- La contraseña nueva usa las mismas reglas de fortaleza de 12 caracteres / 3 clases.
+- Tras actualizar la contraseña se cierra la sesión de recuperación y se obliga a iniciar sesión de nuevo.
+- Sigue pendiente la prueba real del email y redirect en navegador antes de producción.
 
 ## QA técnico ejecutado
 
-### Asset v56
+### Asset v57
 
 - documento termina correctamente: PASS
 - botones apertura/cierre: PASS (`143/143`)
-- forms apertura/cierre: PASS (`5/5`)
-- template literals con backticks pares: PASS
-- sin `service_role`: PASS
-- sin identificadores funcionales fijos de alumnas: PASS
+- formularios apertura/cierre: PASS (`5/5`)
+- sin regex legacy de invitación 12/24: PASS
+- regex exacta de invitación 24 hex presente: PASS
+- flujo de solicitud y actualización de contraseña presente: PASS
+- sin `service_role` en frontend: PASS
 - sincronización por UUID: PASS
 - caché local aislada por propietario: PASS
 - cierre de sesión sin re-persistir la caché anterior: PASS
@@ -131,8 +146,9 @@ Existe una Edge Function de preview separada de producción. El preview está pr
 - constructor de certificado: sin email/teléfono y exige nombre confirmado.
 - funciones públicas anónimas: únicamente verificador v2.
 - frontend assets/chunks/manifests públicos: CERRADO.
-- consulta pública mínima de `academy_backend_meta`: PASS tras reducir privilegios por columna.
-- RPC académica autenticada comprobada tras el cambio de privilegios: PASS.
+- `anon`: 0 privilegios a nivel de tabla; 5 privilegios de columna mínimos en `academy_backend_meta`.
+- operaciones anónimas de escritura sobre tablas públicas: 0 privilegios.
+- consulta pública mínima de `academy_backend_meta`: PASS.
 - triggers privados directamente ejecutables por `anon`/`authenticated`: 0.
 - usuarios Auth actuales: 2 perfiles reales; 2 roles Admin y 1 rol Alumna.
 - trigger legacy de allowlist en `auth.users`: retirado.
@@ -144,7 +160,7 @@ Seguridad pendiente:
 
 - `Leaked Password Protection`: desactivado; requiere configuración de Auth fuera de las acciones disponibles en este conector.
 
-El aviso anterior de `admin_create_student_invite_v2` como `SECURITY DEFINER` público ya está resuelto: la función es ahora `SECURITY INVOKER`. El Security Advisor no devuelve actualmente ningún otro aviso de función/DDL, aparte de Leaked Password Protection.
+El Security Advisor no devuelve actualmente ningún otro aviso de función/DDL, aparte de Leaked Password Protection.
 
 Rendimiento:
 
@@ -162,7 +178,7 @@ Rendimiento:
 6. Invitación real de QA de extremo a extremo y primer login de segunda alumna.
 7. Confirmar que Admin lista segunda alumna sin duplicados y por UUID.
 8. Entrega → evaluación → feedback → desbloqueo con dos cuentas reales.
-9. Recuperación de contraseña una vez que el dominio de producción tenga la release nueva.
+9. Recuperación de contraseña real y redirect de email.
 10. Certificado y verificador público reales cuando exista un expediente finalizable.
 11. Activar/revisar Leaked Password Protection en Supabase Auth.
 12. Solo después actualizar `main` con la release validada.
