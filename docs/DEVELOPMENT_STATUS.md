@@ -17,9 +17,9 @@ Supabase mantiene un alias estable al asset de trabajo más reciente:
 
 Estado actual:
 
-- versión de desarrollo: **43**
-- SHA-256: `77c1256dfe52e118ee2eb49f7ab7427340756307cacd8200534e130f20c81fdd`
-- asset histórico equivalente: `development-14t-home-route-actions-index.html`
+- versión de desarrollo: **50**
+- SHA-256: `e1f1b96ceb1a3e09e61fb4171f1c1aecac9bb6eea31086a438c52f1776a6d56e`
+- asset histórico equivalente: `development-14r-dynamic-student-cleanup-index.html`
 
 Existe además una Edge Function de **preview de desarrollo** separada de producción, protegida por una clave no publicada en el repositorio, con `noindex`, `no-store` y cabeceras de versión/hash. Sirve para QA visual sin sustituir Netlify producción.
 
@@ -29,20 +29,19 @@ Existe además una Edge Function de **preview de desarrollo** separada de produc
 
 - `← Volver al programa` contextual y determinista.
 - Restauración de posición al volver desde un módulo al Programa.
-- El acceso a un módulo en curso continúa por la primera clase pendiente en lugar de volver siempre a la clase 1.
-- Los CTAs del Programa distinguen `Empezar módulo`, `Continuar módulo` y `Revisar módulo`.
-- La sección `Ruta cercana` de Inicio usa una acción contextual por módulo: empezar, continuar, preparar entrega, ver entrega, revisar feedback o revisar módulo según el estado real.
+- El acceso a un módulo en curso continúa por la primera clase pendiente.
+- Los CTAs distinguen `Empezar`, `Continuar`, `Revisar`, `Preparar entrega`, `Ver entrega` y `Revisar feedback` según el estado real.
+- `Ruta cercana` de Inicio usa la acción académica correcta para cada módulo.
 - Mi perfil integrado en la tarjeta inferior izquierda de escritorio.
+- El nombre mostrado en perfil usa los datos personales confirmados cuando existen.
 - Avatar de perfil compacto en móvil.
-- Copy de botones más explícito y jerarquía de CTA revisada.
-- Microtransiciones de 160 ms sin animaciones decorativas.
-- `prefers-reduced-motion` respetado.
+- Microtransiciones breves y funcionales; `prefers-reduced-motion` respetado.
 
 ### Ficha del alumno y certificación
 
 - Ficha del alumno dentro de Mi perfil.
 - Nombre + apellidos para certificado; segundo apellido opcional.
-- Sin DNI/NIE/pasaporte.
+- No se solicitan documentos de identidad.
 - Teléfono opcional y privado.
 - Confirmación explícita del nombre de certificado.
 - Invalidación de confirmación al modificar nombre/apellidos.
@@ -50,80 +49,80 @@ Existe además una Edge Function de **preview de desarrollo** separada de produc
 - Verificador público reducido a datos mínimos.
 - Estado de ficha visible para Admin.
 - Certificado emitido visible desde Mi perfil cuando exista.
+- Copy de privacidad de desarrollo limpiado; la información legal completa sigue pendiente de responsable/email reales.
 
 ### Formularios y acciones
 
 - Estados `Guardando`, `Enviando`, `Publicando` y `aria-busy`.
 - Protección contra pérdida de cambios en perfil, entregas y evaluaciones.
-- Los drawers editables advierten antes de perder cambios.
+- Drawers editables con confirmación antes de descartar cambios.
 - Marcar una clase ya completada como pendiente requiere confirmación explícita.
-- El botón de clase se bloquea mientras Supabase confirma la escritura para impedir dobles acciones.
+- El botón de clase se bloquea mientras Supabase confirma la escritura.
 - Errores de formulario llevan el foco al campo que necesita corrección.
 - Touch targets principales revisados para móvil.
 
-### Autenticación y seguridad
+### Autenticación, identidad y seguridad
 
-- El desarrollo utiliza únicamente Auth real de Supabase para iniciar sesión.
-- Eliminado el acceso administrativo local/de contingencia embebido en frontend.
+- Inicio de sesión únicamente mediante Supabase Auth real.
+- Eliminado el acceso administrativo local/de contingencia del frontend de desarrollo.
 - Eliminada la restauración automática de sesiones locales heredadas.
-- El campo de acceso exige email y usa `type=email`.
-- El selector Alumna/Admin depende exclusivamente de los roles devueltos por Supabase.
+- Login por email con `type=email`.
+- Selector Alumna/Admin únicamente desde roles de Supabase.
 - Sin `service_role` en frontend.
-- La clave presente en cliente es únicamente publishable.
+- Eliminadas identidades y estados de activación hardcodeados del bundle.
+- El alumnado ya no se asocia por coincidencia de nombre: la identidad de trabajo usa el UUID `user_id` de Supabase.
+- El directorio Admin se hidrata desde las matrículas/resumen remoto.
+- Eliminada la lista estática inicial de estudiantes.
+- `pioc-publish-web`, antiguo publicador sin autenticación, se ha desactivado con HTTP 410; el flujo autenticado `publish-frontend-release` permanece disponible.
 
 ### Móvil
 
 - Cabecera móvil simplificada.
 - `Cerrar sesión` pasa a Mi perfil en móvil.
-- Toasts colocados por encima de la navegación inferior.
+- Toasts por encima de la navegación inferior.
 - Drawer, safe-area y touch targets revisados.
 - Guardar perfil permanece accesible en formularios largos sin tapar la navegación.
 
 ## QA estático del asset actual
 
-Comprobado durante las iteraciones 34–43:
+Comprobado en v50:
 
 - documento termina en `</html>`: PASS
-- sin HUD Netlify embebido: PASS
 - botones apertura/cierre equilibrados: PASS
 - forms apertura/cierre equilibrados: PASS
-- un único bloque de estilos: PASS
 - template literals con backticks pares: PASS
 - sin `history.back()` ciego: PASS
 - navegación contextual al Programa: PASS
-- restauración del contexto del Programa: PASS
 - continuación inteligente de módulo: PASS
-- acciones contextuales coherentes en Inicio: PASS
-- protección de cambios sin guardar del perfil: PASS
-- protección de drawers editables: PASS
-- loading en clase/borrador/entrega/evaluación/perfil: PASS
-- reduced motion: PASS
-- perfil accesible en escritorio y móvil: PASS
-- acceso únicamente mediante Auth real en desarrollo: PASS
-- sin credenciales administrativas embebidas en el asset de desarrollo: PASS
+- perfil inferior de escritorio: PASS
+- login real únicamente: PASS
+- sin sesión legacy: PASS
+- sin login Admin local: PASS
+- sin mapeo de estudiantes por nombre: PASS
+- sin lista estática de estudiantes: PASS
 - sin `service_role` en frontend: PASS
-- sin campos de documento de identidad: PASS
-- verificador público mínimo: PASS
 
 ## Supabase Advisors
 
 ### Seguridad
 
-El advisor de Supabase mantiene un aviso de configuración de Auth:
+Aviso de configuración pendiente:
 
 - Leaked Password Protection: desactivado.
 
-No se ha cambiado automáticamente porque es una configuración de Auth del proyecto, no una migración de datos.
+No se ha cambiado automáticamente porque el conector actual no expone la configuración de Auth necesaria.
 
 ### Rendimiento
 
-Hay avisos informativos de índices aún no utilizados y varias políticas RLS permisivas superpuestas. No se han eliminado ni fusionado automáticamente porque requieren una revisión específica de consultas y permisos para no degradar la seguridad.
+Existen avisos informativos de índices aún no utilizados y varias políticas RLS permisivas superpuestas. No se han modificado automáticamente para evitar cambiar semántica de permisos sin QA específico.
 
 ## Pendiente antes de producción
 
 1. Cerrar los datos reales de protección de datos: responsable y email de privacidad.
-2. Ejecutar QA en navegador sobre el preview de desarrollo.
+2. QA en navegador sobre el preview de desarrollo.
 3. Probar 320/360/390/412 px, tablet y escritorio.
-4. Login real, recarga, Alumna/Admin, perfil, entrega, evaluación y certificado.
-5. Revisar la configuración `Leaked Password Protection` de Supabase Auth.
-6. Solo después actualizar producción y `main`.
+4. Login real, recarga, cuenta Alumna, Admin y Alumna+Admin.
+5. Comprobar listado Admin sin duplicados tras el cambio a UUID.
+6. Entrega, evaluación, aislamiento entre usuarios y certificado.
+7. Revisar `Leaked Password Protection` en Supabase Auth.
+8. Solo después actualizar producción y `main`.
