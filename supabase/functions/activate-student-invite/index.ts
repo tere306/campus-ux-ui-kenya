@@ -5,6 +5,8 @@ const ALLOWED_ORIGINS = new Set([
   "https://fancy-cranachan-c98e89.netlify.app",
   "https://azacjdyxgknfqarcemhi.supabase.co",
 ]);
+const MAX_BODY_BYTES = 4096;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function cors(req: Request) {
   const origin = req.headers.get("origin") || "";
@@ -24,6 +26,7 @@ const json = (req: Request, body: unknown, status = 200) => new Response(JSON.st
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
+    "Cross-Origin-Resource-Policy": "same-site",
   },
 });
 
@@ -32,8 +35,16 @@ async function sha256Hex(value: string) {
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+function safeEqualHex(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 function passwordError(password: string) {
   if (password.length < 12) return "La contraseña debe tener al menos 12 caracteres.";
+  if (password.length > 256) return "La contraseña es demasiado larga.";
   const classes = [/[a-z]/.test(password), /[A-Z]/.test(password), /[0-9]/.test(password), /[^A-Za-z0-9]/.test(password)].filter(Boolean).length;
   if (classes < 3) return "Usa al menos tres tipos entre minúsculas, mayúsculas, números y símbolos.";
   return "";
@@ -44,15 +55,26 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json(req, { error: "Método no permitido." }, 405);
 
   try {
-    const { email, code, password } = await req.json();
-    const normalizedEmail = String(email || "").trim().toLowerCase();
-    const normalizedCode = String(code || "").trim().toUpperCase();
-    const pwd = String(password || "");
+    const contentLength = Number(req.headers.get("content-length") || 0);
+    if (contentLength > MAX_BODY_BYTES) return json(req, { error: "Solicitud demasiado grande." }, 413);
+
+    const raw = await req.text();
+    if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) return json(req, { error: "Solicitud demasiado grande." }, 413);
+    let parsed: Record<string, unknown>;
+    try { parsed = JSON.parse(raw || "{}"); }
+    catch { return json(req, { error: "Solicitud no válida." }, 400); }
+
+    const normalizedEmail = String(parsed.email || "").trim().toLowerCase();
+    const normalizedCode = String(parsed.code || "").trim().toUpperCase();
+    const pwd = String(parsed.password || "");
 
     if (!normalizedEmail || !normalizedCode || !pwd) {
       return json(req, { error: "Correo, código y contraseña son obligatorios." }, 400);
     }
-    if (!/^(?:[A-F0-9]{12}|[A-F0-9]{24})$/.test(normalizedCode)) {
+    if (normalizedEmail.length > 254 || !EMAIL_RE.test(normalizedEmail)) {
+      return json(req, { error: "Introduce un correo válido." }, 400);
+    }
+    if (!/^[A-F0-9]{24}$/.test(normalizedCode)) {
       return json(req, { error: "No se pudo validar la invitación. Revisa el código e inténtalo de nuevo." }, 400);
     }
     const pwdError = passwordError(pwd);
@@ -84,7 +106,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const suppliedHash = await sha256Hex(normalizedCode);
-    if (suppliedHash !== invite.activation_code_hash) {
+    if (!safeEqualHex(suppliedHash, String(invite.activation_code_hash))) {
       const attempts = Number(invite.activation_attempts || 0) + 1;
       const patch: Record<string, unknown> = { activation_attempts: attempts };
       if (attempts >= 5) patch.activation_locked_until = new Date(now + 15 * 60 * 1000).toISOString();
