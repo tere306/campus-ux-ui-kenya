@@ -36,5 +36,17 @@ El proyecto contiene migraciones desde `initial_pioc_schema` (2026-08-31) hasta 
 - `revoke_direct_execute_on_private_trigger_functions`
 - `disable_legacy_allowed_email_bootstrap_trigger`
 - `make_admin_create_invite_security_invoker`
+- `reduce_anonymous_table_privileges`
+- `reduce_anonymous_read_surface`
+- `revoke_legacy_private_certificate_verifier`
+- `secure_postgres_anonymous_defaults`
+- `revoke_anonymous_maintain_privilege`
+- `make_legacy_web_bucket_private`
 
 Las migraciones nuevas aplicadas durante esta sesión se están copiando a este directorio con el mismo timestamp/nombre que consta en `supabase_migrations.schema_migrations` para que GitHub pueda reconstruir y auditar el backend sin depender únicamente del historial alojado en Supabase.
+
+## Convención de seguridad
+
+Las migraciones del campus se ejecutan como `postgres`. Los privilegios por defecto de ese rol en `public` ya no conceden permisos a `anon` sobre tablas, secuencias o funciones nuevas. Si un objeto debe ser público, el permiso se concede de forma explícita y mínima en su propia migración.
+
+Los defaults internos administrados por la plataforma (`supabase_admin`) no se modifican desde estas migraciones; cualquier objeto de plataforma se revisa por separado y no se considera parte de la superficie pública del campus por defecto.
