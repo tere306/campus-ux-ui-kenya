@@ -9,7 +9,7 @@ Este archivo registra los artefactos de frontend conservados fuera del deploy p�
 - deploy actual: `6a9e8ed5b2c90359c1b8081d`
 - tipo de deploy: manual / `drop`
 - release registrada en `academy_frontend_releases`: v14
-- `source_sha256`: `7e97173d39f5cf70d6994c4ad7b83f20046cb319d1993ce9e3ab6e8`
+- `source_sha256`: `7e97173d39f5cf70d6994c4ad7b83f20046cb319d1993ce9e3b58a0e1e3ab6e8`
 - snapshot HTML exacto conservado en `academy_frontend_assets`: `production-snapshot-2026-09-07-index.html` v15
 - SHA-256 del snapshot HTML: `1ec4fd29b3055b188d4d0a59f4187bbf2d015a53311aa141f3a859c44afd2738`
 
@@ -54,11 +54,26 @@ El alias `development-current-index.html` siempre debe apuntar al artefacto de d
 ### v57
 
 - asset histórico: `development-14w-invite-24hex-only-index.html`
-- alias: `development-current-index.html`
 - SHA-256: `dcc85e599801d1f5f8e2eedee1c770bc0363f8c4fe9704457154e02332b80016`
 - tamaño: 710.095 caracteres.
 - cambio principal: el frontend deja de aceptar el formato legacy de invitación de 12 caracteres y queda alineado con el endpoint v5, que solo acepta códigos hexadecimales de 24 caracteres.
 - QA estructural: 143/143 botones, 5/5 formularios, cierre HTML correcto y flujo de recuperación de contraseña presente.
+
+### v58
+
+- asset histórico: `development-14x-explicit-button-types-index.html`
+- SHA-256: `5f8092002da6d6c114ba9c1a5c361664294c7af9d7551b791b3d3f88ffe99d59`
+- cambio principal: los 66 botones que dependían del tipo implícito pasan a declarar `type="button"`; los 5 botones de envío conservan `type="submit"`.
+- objetivo: evitar submits accidentales al reutilizar componentes dentro de formularios y hacer explícita la semántica de interacción.
+
+### v59
+
+- asset histórico: `development-14x-search-accessibility-index.html`
+- alias: `development-current-index.html`
+- SHA-256: `5e7863558a430923e5db1a4b3dabbb089410f2c65b2e7d6b6ca4152e56722f83`
+- tamaño: 711.089 caracteres.
+- cambio principal: accesibilidad de los dos campos de búsqueda que dependían únicamente de placeholder (`librarySearch` y `reviewSearch`), añadiendo nombres accesibles explícitos.
+- QA estático: 0 botones sin tipo explícito; 0 campos de formulario sin `id` o nombre accesible; enlaces `target="_blank"` con `noopener`; sin `history.back()`.
 - estado: desarrollo actual.
 
 ## Regla de publicación
