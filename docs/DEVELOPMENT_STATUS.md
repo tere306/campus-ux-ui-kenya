@@ -7,7 +7,13 @@
 - Hosting: Netlify
 - Sitio: `https://fancy-cranachan-c98e89.netlify.app/`
 - Release de frontend registrada como actual en Supabase: v14
-- Producción no se ha sustituido durante los cambios 14S/14T/14R/14U/14V de esta sesión.
+- Producción todavía no se ha sustituido durante los cambios 14S/14T/14R/14U/14V.
+- Auditoría detectó que el bundle actualmente publicado conserva un acceso legacy/local embebido en frontend. No se documenta aquí el valor de esa credencial.
+- Se ha preparado un hotfix basado exactamente en producción que elimina ese acceso legacy sin incorporar todavía el resto de cambios de desarrollo:
+  - asset: `production-security-hotfix-no-legacy-auth-index.html`
+  - versión: 16
+  - SHA-256: `8d9e9f4be9ad60a53e640495e13daf798b2bd43484398b3b7991259afe925d04`
+- El hotfix no se ha desplegado todavía en Netlify porque el sitio actual es un deploy manual y el conector disponible no permite sustituir de forma segura el archivo del deploy sin una operación explícita de publicación.
 
 ## Desarrollo actual
 
@@ -65,33 +71,37 @@ Existe una Edge Function de preview separada de producción. El preview está pr
 - La sincronización de clases usa `localStudentIdFromAuth()` y el `user_id` real de Supabase.
 - Backups de progreso registran el UUID activo en vez de un identificador fijo.
 - Reconciliación local/remota de clases aplica sobre la alumna autenticada.
-- La comprobación de versión curricular se aplica a cualquier cuenta con rol Alumna, no a un nombre concreto.
+- La comprobación de versión curricular se aplica a cualquier cuenta con rol Alumna.
 - Importación de copias valida dinámicamente todas las entradas de `studentData`.
-- Eliminados textos y lógica residuales específicos de `Tere`/`Kenya` del asset de desarrollo.
+- Eliminados textos y lógica residuales específicos de alumnas concretas del asset de desarrollo.
+- Scan de funciones `public/private`: no quedan referencias por nombre a alumnas concretas.
 
 ### Autenticación y seguridad
 
-- Solo Supabase Auth real.
-- Sin login Admin local/legacy.
+- Desarrollo: solo Supabase Auth real.
+- Sin login Admin local/legacy en desarrollo.
 - Sin restauración automática de sesiones heredadas.
 - Selector Alumna/Admin únicamente desde roles de Supabase.
 - Sin `service_role` en frontend.
 - Directorio Admin desde matrículas reales.
 - `pioc-publish-web` y accesos especiales legacy deshabilitados.
+- `public.is_admin()` ya no es ejecutable por `anon`.
+- Única función pública ejecutable por `anon`: `verify_master_certificate_v2(text)`.
 - Una cuenta sin invitación/matrícula/rol no obtiene acceso académico.
+- `academy_frontend_assets` y `academy_frontend_chunks` dejaron de ser públicamente legibles. El acceso anónimo fue revocado y la lectura autenticada queda limitada por RLS a Admin del programa.
+- `academy_backend_meta` permanece públicamente legible porque el login lo usa para comprobar la salud/versión del backend y no contiene datos personales.
 
 ## QA técnico ejecutado
 
 ### Asset v53
 
-- documento termina en `</html>`: PASS
+- documento termina correctamente: PASS
 - botones apertura/cierre: PASS (`143/143`)
 - forms apertura/cierre: PASS (`5/5`)
 - template literals con backticks pares: PASS
 - sin `service_role`: PASS
 - sin `sdata('tere')`: PASS
-- sin identificador literal `'tere'`: PASS
-- sin referencias funcionales a Kenya: PASS
+- sin identificadores funcionales fijos de alumnas: PASS
 - sincronización por `localStudentIdFromAuth()`: PASS
 - gate curricular genérico para cualquier Alumna: PASS
 
@@ -105,6 +115,8 @@ Existe una Edge Function de preview separada de producción. El preview está pr
 - 0 expedientes/certificados visibles
 - verificador con código inválido: solo `valid:false / status:not_found`
 - constructor de certificado: sin email/teléfono y exige nombre confirmado
+- funciones públicas `anon`: únicamente verificador v2
+- frontend assets/chunks públicos: CERRADO
 
 ## Supabase Advisors
 
@@ -117,13 +129,14 @@ No se han eliminado índices ni fusionado políticas RLS de rendimiento sin QA e
 
 ## Pendiente antes de producción
 
-1. Responsable legal y email de privacidad reales.
-2. QA visual en navegador sobre preview.
-3. Responsive 320/360/390/412, tablet y escritorio.
-4. Login, F5, logout, Alumna, Admin y Alumna+Admin.
-5. Invitación real de QA de extremo a extremo y primer login de segunda alumna.
-6. Confirmar que Admin lista segunda alumna sin duplicados y por UUID.
-7. Entrega → evaluación → feedback → desbloqueo con dos cuentas reales.
-8. Certificado y verificador público reales cuando exista un expediente finalizable.
-9. Activar/revisar Leaked Password Protection en Supabase Auth.
-10. Solo después actualizar producción y `main`.
+1. Resolver el hotfix de autenticación legacy en el deploy público actual o sustituirlo por la release nueva validada.
+2. Responsable legal y email de privacidad reales.
+3. QA visual en navegador sobre preview.
+4. Responsive 320/360/390/412, tablet y escritorio.
+5. Login, F5, logout, Alumna, Admin y Alumna+Admin.
+6. Invitación real de QA de extremo a extremo y primer login de segunda alumna.
+7. Confirmar que Admin lista segunda alumna sin duplicados y por UUID.
+8. Entrega → evaluación → feedback → desbloqueo con dos cuentas reales.
+9. Certificado y verificador público reales cuando exista un expediente finalizable.
+10. Activar/revisar Leaked Password Protection en Supabase Auth.
+11. Solo después actualizar `main` con la release validada.
