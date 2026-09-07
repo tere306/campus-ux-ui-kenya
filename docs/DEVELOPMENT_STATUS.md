@@ -7,7 +7,7 @@
 - Hosting: Netlify
 - Sitio: `https://fancy-cranachan-c98e89.netlify.app/`
 - Release de frontend registrada como actual en Supabase: v14
-- Producción no se ha sustituido durante los cambios 14S/14T/14R de esta sesión.
+- Producción no se ha sustituido durante los cambios 14S/14T/14R/14U de esta sesión.
 
 ## Desarrollo actual
 
@@ -17,11 +17,13 @@ Supabase mantiene un alias estable al asset de trabajo más reciente:
 
 Estado actual:
 
-- versión de desarrollo: **50**
-- SHA-256: `e1f1b96ceb1a3e09e61fb4171f1c1aecac9bb6eea31086a438c52f1776a6d56e`
-- asset histórico equivalente: `development-14r-dynamic-student-cleanup-index.html`
+- versión de desarrollo: **52**
+- SHA-256: `77db0d842b3a5506ffb5c6060383f9876dacf4a3f22f5de721a8c947cc289009`
+- snapshots previos conservados:
+  - `development-14u-before-invite-ui-index.html` · v50
+  - `development-14u-activation-ui-index.html` · v51
 
-Existe además una Edge Function de **preview de desarrollo** separada de producción, protegida por una clave no publicada en el repositorio, con `noindex`, `no-store` y cabeceras de versión/hash. Sirve para QA visual sin sustituir Netlify producción.
+Existe además una Edge Function de **preview de desarrollo** separada de producción. El preview sigue protegido por clave y usa `noindex`, `no-store`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` restrictiva y una CSP específica para el campus.
 
 ## Cambios acumulados principales
 
@@ -46,10 +48,11 @@ Existe además una Edge Function de **preview de desarrollo** separada de produc
 - Confirmación explícita del nombre de certificado.
 - Invalidación de confirmación al modificar nombre/apellidos.
 - Bloqueo backend de emisión si la ficha no está confirmada.
-- Verificador público reducido a datos mínimos.
+- El snapshot del certificado usa el nombre confirmado y no incluye email/teléfono.
+- Verificador público `verify_master_certificate_v2` reducido a nombre, programa, finalización, estado y código.
 - Estado de ficha visible para Admin.
 - Certificado emitido visible desde Mi perfil cuando exista.
-- Copy de privacidad de desarrollo limpiado; la información legal completa sigue pendiente de responsable/email reales.
+- La información legal completa sigue pendiente de responsable/email reales.
 
 ### Formularios y acciones
 
@@ -73,7 +76,37 @@ Existe además una Edge Function de **preview de desarrollo** separada de produc
 - El alumnado ya no se asocia por coincidencia de nombre: la identidad de trabajo usa el UUID `user_id` de Supabase.
 - El directorio Admin se hidrata desde las matrículas/resumen remoto.
 - Eliminada la lista estática inicial de estudiantes.
-- `pioc-publish-web`, antiguo publicador sin autenticación, se ha desactivado con HTTP 410; el flujo autenticado `publish-frontend-release` permanece disponible.
+- `pioc-publish-web`, antiguo publicador sin autenticación, está desactivado con HTTP 410.
+- `pioc-tere-access`, antiguo acceso especial con email/clave embebidos, también se ha desactivado con HTTP 410 y ahora requiere JWT.
+- El antiguo allowlist de bootstrap ya no bloquea el alta legítima de alumnas invitadas. Una cuenta sin invitación ni bootstrap no obtiene perfil/matrícula y por tanto no obtiene acceso al campus.
+
+### Invitaciones de alumnas · 14U
+
+Backend:
+
+- `admin_create_student_invite_v2`
+- `get_admin_student_invites_v2`
+- `admin_generate_student_activation_code`
+- `admin_cancel_student_invite_v2`
+
+Todos los RPC de administración requieren sesión autenticada y rol Admin del programa.
+
+- Los códigos nuevos tienen 24 caracteres hexadecimales (96 bits de entropía).
+- Caducidad por defecto: 7 días.
+- Tras 5 códigos incorrectos se bloquea la activación durante 15 minutos.
+- El endpoint público de activación acepta códigos antiguos de 12 caracteres y nuevos de 24 para compatibilidad.
+- Contraseña de activación: mínimo 12 caracteres y al menos 3 tipos de caracteres.
+- El endpoint no devuelve `user_id` ni usa respuestas innecesariamente detalladas para correos no válidos.
+- CORS limitado a producción y al origen Supabase del preview.
+
+Frontend v52:
+
+- Login incluye `Tengo un código de invitación`.
+- Formulario de activación con email, código, contraseña y confirmación.
+- Los enlaces con fragmento `#invite=...` precargan email/código sin enviarlos al servidor y limpian el fragmento al abrir el formulario.
+- Admin → Alumnas incorpora `Gestionar invitaciones`.
+- Admin puede crear, regenerar, cancelar y copiar el enlace de activación.
+- Una invitación aceptada pasa a matrícula real y el alumnado aparece por UUID, sin tocar el frontend.
 
 ### Móvil
 
@@ -83,24 +116,32 @@ Existe además una Edge Function de **preview de desarrollo** separada de produc
 - Drawer, safe-area y touch targets revisados.
 - Guardar perfil permanece accesible en formularios largos sin tapar la navegación.
 
-## QA estático del asset actual
+## QA técnico ejecutado
 
-Comprobado en v50:
+### Asset v52
 
 - documento termina en `</html>`: PASS
-- botones apertura/cierre equilibrados: PASS
-- forms apertura/cierre equilibrados: PASS
+- botones apertura/cierre equilibrados: PASS (`143/143`)
+- forms apertura/cierre equilibrados: PASS (`5/5`)
 - template literals con backticks pares: PASS
-- sin `history.back()` ciego: PASS
-- navegación contextual al Programa: PASS
-- continuación inteligente de módulo: PASS
-- perfil inferior de escritorio: PASS
-- login real únicamente: PASS
-- sin sesión legacy: PASS
-- sin login Admin local: PASS
-- sin mapeo de estudiantes por nombre: PASS
-- sin lista estática de estudiantes: PASS
+- formulario de activación presente: PASS
+- endpoint de activación referenciado: PASS
+- gestión Admin de invitaciones presente: PASS
+- RPC crear/regenerar/cancelar/listar presentes: PASS
 - sin `service_role` en frontend: PASS
+- sin credencial Admin local: PASS
+
+### Backend de invitaciones
+
+Se ejecutó QA transaccional con una invitación ficticia temporal:
+
+- lectura Admin de invitaciones: PASS
+- creación de invitación: PASS
+- código de 24 caracteres: PASS
+- cancelación: PASS
+- limpieza del dato de QA: PASS
+
+No se modificó la invitación real pendiente durante estas pruebas.
 
 ## Supabase Advisors
 
@@ -122,7 +163,8 @@ Existen avisos informativos de índices aún no utilizados y varias políticas R
 2. QA en navegador sobre el preview de desarrollo.
 3. Probar 320/360/390/412 px, tablet y escritorio.
 4. Login real, recarga, cuenta Alumna, Admin y Alumna+Admin.
-5. Comprobar listado Admin sin duplicados tras el cambio a UUID.
-6. Entrega, evaluación, aislamiento entre usuarios y certificado.
-7. Revisar `Leaked Password Protection` en Supabase Auth.
-8. Solo después actualizar producción y `main`.
+5. Probar de extremo a extremo una invitación de QA desde Admin hasta activación y primer login.
+6. Comprobar listado Admin sin duplicados tras alta de una segunda alumna.
+7. Entrega, evaluación, aislamiento entre usuarios y certificado.
+8. Revisar `Leaked Password Protection` en Supabase Auth.
+9. Solo después actualizar producción y `main`.
