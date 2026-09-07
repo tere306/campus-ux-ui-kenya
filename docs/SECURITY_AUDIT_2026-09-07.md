@@ -2,13 +2,13 @@
 
 ## Alcance
 
-Revisión del frontend de producción y desarrollo, permisos/RLS de Supabase, funciones RPC expuestas, almacenamiento local, invitaciones, certificados y despliegue Netlify.
+Revisión del frontend de producción y desarrollo, permisos/RLS de Supabase, funciones RPC expuestas, almacenamiento local, invitaciones, certificados, triggers de Auth, Edge Functions y despliegue Netlify.
 
 ## Hallazgos corregidos
 
 ### Frontend público legacy
 
-El bundle actualmente publicado en Netlify conserva un acceso provisional/local embebido. El valor de la credencial no se versiona ni se documenta. Se ha preparado un hotfix exacto de producción sin ese acceso, pero no se ha publicado porque el deploy actual de Netlify es manual (`drop`) y no existe todavía una ruta segura de sustitución del archivo desde el conector.
+El bundle actualmente publicado en Netlify conserva un acceso provisional/local embebido. El valor de la credencial no se versiona ni se documenta. Se ha preparado un hotfix exacto de producción sin ese acceso, pero no se ha publicado porque el deploy actual de Netlify es manual (`drop`) y todavía no se ha validado una sustitución segura del artefacto público.
 
 Hotfix preparado:
 
@@ -16,13 +16,67 @@ Hotfix preparado:
 - versión 16
 - SHA-256 `8d9e9f4be9ad60a53e640495e13daf798b2bd43484398b3b7991259afe925d04`
 
-### Exposición de snapshots de frontend
+### Exposición de snapshots y manifests de frontend
 
-`academy_frontend_assets` y `academy_frontend_chunks` tenían lectura anónima. Se eliminó la política pública y los grants anónimos. Actualmente solo un usuario autenticado con rol Admin del programa puede leer estas copias mediante RLS.
+`academy_frontend_assets`, `academy_frontend_chunks` y posteriormente `academy_frontend_releases` tenían superficie de lectura anónima. Se eliminaron las políticas/grants públicos de los tres almacenes. Las copias completas, chunks y manifests quedan restringidos a acceso administrativo autenticado según RLS.
 
 ### Superficie RPC anónima
 
 Se revisaron todas las funciones `public`. Solo `verify_master_certificate_v2(text)` continúa siendo ejecutable por `anon`, de forma intencionada. El verificador legacy `verify_program_certificate(text)` no es ejecutable por `anon` ni por `authenticated`.
+
+### Funciones privadas usadas como triggers
+
+Se detectaron varias funciones `SECURITY DEFINER` del esquema `private` que eran exclusivamente funciones de trigger pero conservaban `EXECUTE` heredado para `anon`/`authenticated`. Se revocó la ejecución directa sobre todas las funciones privadas actualmente enlazadas a triggers. Los triggers siguen siendo el único mecanismo de entrada para esas funciones.
+
+### Onboarding: cierre del bypass por alta directa
+
+El flujo anterior podía aprovisionar una matrícula si se creaba un usuario Auth cuyo email coincidía con una invitación pendiente. Aunque el frontend no expusiera registro libre, una llamada directa a Auth no debía poder convertirse en un alta académica.
+
+El flujo nuevo enlaza la matrícula a una prueba emitida exclusivamente por la Edge Function después de validar el código de invitación:
+
+1. Admin genera un código de 24 caracteres hexadecimales (96 bits).
+2. `activate-student-invite` valida email, código, caducidad, bloqueo y contraseña.
+3. La Edge Function calcula el hash del código y crea el usuario mediante Admin Auth incluyendo ese hash en `app_metadata`.
+4. El trigger `academy_enroll_pending_invite` solo matricula si el hash de `app_metadata` coincide con el hash activo de la invitación, el código no está caducado/usado y no existe bloqueo.
+5. Al aceptar la matrícula, el trigger invalida el hash del código, registra `activation_used_at` y marca la invitación como `accepted`.
+6. Si tras crear el usuario la invitación no queda aceptada, la Edge Function elimina la cuenta recién creada para evitar cuentas huérfanas.
+
+La función privada antigua de matrícula por `email` sin prueba de activación fue eliminada.
+
+### Allowlist legacy de Auth retirada
+
+Existía además un trigger histórico `pioc_bootstrap_allowed_user` sobre `auth.users`, ligado a `private.allowed_emails`. Había entradas activas de legado y al menos una no correspondía todavía a un usuario Auth existente. Los usuarios actuales ya están provisionados con perfiles/roles reales, por lo que el trigger se retiró. La tabla histórica puede permanecer para auditoría, pero ya no concede acceso a nuevas cuentas.
+
+El único trigger de onboarding que queda sobre `auth.users` es `academy_enroll_pending_invite`, sujeto al claim validado del código de invitación.
+
+### Invitaciones administrativas sin SECURITY DEFINER público
+
+`admin_create_student_invite_v2` ya no necesita leer `auth.users` y se convirtió a `SECURITY INVOKER`. La autorización depende del rol Admin del programa y de RLS. También se corrigió la recreación de invitaciones canceladas reutilizando la fila existente en lugar de chocar con la restricción única `(program_id,email)`.
+
+Tras el cambio, Supabase Security Advisor ya no reporta ninguna función `SECURITY DEFINER` pública ejecutable por usuarios autenticados.
+
+### Endpoint de activación endurecido
+
+`activate-student-invite` está en v5 y mantiene `verify_jwt=false` por diseño, ya que se usa antes de que exista sesión. Implementa controles propios:
+
+- código nuevo obligatorio de 24 hex (se retiró compatibilidad de activación con códigos antiguos de 12 caracteres);
+- límite de payload de 4 KiB;
+- longitud y formato de email;
+- contraseña entre 12 y 256 caracteres y al menos 3 clases de caracteres;
+- comparación del hash en tiempo constante a nivel de aplicación;
+- caducidad y bloqueo de 15 minutos tras 5 intentos fallidos;
+- CORS restringido a los orígenes previstos;
+- `no-store`, `nosniff`, `no-referrer` y `Cross-Origin-Resource-Policy`.
+
+No había ninguna invitación activa con código antiguo que necesitara mantener el formato de 12 caracteres.
+
+### Preview privado
+
+La clave del preview de desarrollo fue rotada. El valor no se versiona ni se documenta. La versión actual mantiene `noindex`, `no-store`, CSP restrictiva, `frame-ancestors 'none'`, `X-Frame-Options: DENY`, `Permissions-Policy` restrictiva y `Cross-Origin-Resource-Policy: same-origin`.
+
+### Edge Functions legacy
+
+`pioc-campus`, antiguo publicador/redirect con privilegios de servidor, fue retirado y responde HTTP 410. Los helpers históricos de bootstrap, accesos especiales, cambio de contraseña, publicación antigua y parche de navegación permanecen también neutralizados con 410.
 
 ### Helper `is_admin`
 
@@ -42,7 +96,7 @@ La columna interna `notes` no es legible por `anon` ni por el rol genérico `aut
 
 ### Caché del navegador
 
-La sesión Auth usa `sessionStorage`. Desde frontend v54, la caché académica local se vincula a la cuenta autenticada y se elimina al cerrar sesión. Si existe una caché con propietario diferente, se descarta antes de hidratar la nueva cuenta. Esto reduce el riesgo de contaminación entre cuentas en un navegador compartido.
+La sesión Auth usa `sessionStorage`. Desde frontend v54, la caché académica local se vincula a la cuenta autenticada y se elimina al cerrar sesión. Si existe una caché con propietario diferente, se descarta antes de hidratar la nueva cuenta.
 
 ### Enlaces de invitación en preview
 
@@ -52,6 +106,7 @@ Desde v55 los enlaces compartibles se construyen siempre contra el dominio de pr
 
 - RLS habilitado en las tablas académicas y de identidad relevantes.
 - Una identidad autenticada sin matrícula/rol no puede leer perfiles, matrículas, accesos, progreso, entregas, intentos, evaluaciones, expedientes ni certificados.
+- Los dos usuarios Auth actuales tienen perfiles reales; los roles observados son 2 usuarios Admin y 1 de ellos además Alumna.
 - Certificados emitidos son inmutables.
 - La revocación se registra por separado.
 - El certificado exige nombre confirmado.
@@ -59,20 +114,16 @@ Desde v55 los enlaces compartibles se construyen siempre contra el dominio de pr
 - Los códigos de invitación nuevos usan 96 bits de entropía y tienen caducidad.
 - Tras 5 intentos fallidos de activación se aplica bloqueo temporal.
 - Los RPC de invitaciones comprueban rol Admin del programa.
+- No quedan funciones privadas enlazadas a triggers con ejecución directa para `anon` o `authenticated`.
+- Security Advisor: únicamente queda el aviso de Leaked Password Protection.
 
-## Avisos todavía abiertos
+## Aviso todavía abierto
 
 ### Leaked Password Protection
 
 Supabase Auth indica que la protección contra contraseñas filtradas está desactivada. Debe activarse desde la configuración de Auth cuando se disponga de una acción compatible.
 
 Referencia: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
-
-### `admin_create_student_invite_v2`
-
-Es el único RPC `public` con `SECURITY DEFINER` ejecutable por `authenticated`. Se mantiene así porque necesita consultar `auth.users`. Antes de consultar Auth o modificar una invitación valida que la sesión tenga rol Admin del programa. Los otros RPC de invitaciones se pasaron a `SECURITY INVOKER`.
-
-Referencia: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
 
 ## Rendimiento
 
