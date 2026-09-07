@@ -2,7 +2,7 @@
 
 La fuente de verdad actual del historial es Supabase (`pioc-campus`).
 
-El proyecto contiene migraciones desde `initial_pioc_schema` (2026-08-31) hasta los bloques de QA 14O del 2026-09-07.
+El proyecto contiene migraciones desde `initial_pioc_schema` (2026-08-31) hasta los bloques de QA y endurecimiento del 2026-09-07.
 
 Último tramo confirmado:
 - `master_backend_identity_bridge_v14b`
@@ -20,5 +20,13 @@ El proyecto contiene migraciones desde `initial_pioc_schema` (2026-08-31) hasta 
 - `qa_current_attempt_review_order_and_resource_refs_14o`
 - `qa_admin_unique_module_access_count_14o`
 - `qa_submission_evidence_url_scheme_guard_14o`
+- `student_profile_certificate_data_14s`
+- `master_student_profile_certificate_gate_14s`
+- `allow_invite_onboarding_without_legacy_allowlist`
+- `student_invite_admin_workflow_v2`
+- `scope_student_invites_rls_and_reduce_definers`
+- `disable_legacy_public_certificate_verifier`
+- `revoke_anon_public_is_admin_execute`
+- `lock_down_public_is_admin_execute`
 
-Las nuevas migraciones SQL se versionarán aquí de forma coordinada con su aplicación en Supabase.
+Las migraciones nuevas aplicadas durante esta sesión se están copiando a este directorio con el mismo timestamp/nombre que consta en `supabase_migrations.schema_migrations` para que GitHub pueda reconstruir y auditar el backend sin depender únicamente del historial alojado en Supabase.
