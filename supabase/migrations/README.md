@@ -42,11 +42,14 @@ El proyecto contiene migraciones desde `initial_pioc_schema` (2026-08-31) hasta 
 - `secure_postgres_anonymous_defaults`
 - `revoke_anonymous_maintain_privilege`
 - `make_legacy_web_bucket_private`
+- `disable_legacy_certificate_issue_revoke_paths`
 
-Las migraciones nuevas aplicadas durante esta sesión se están copiando a este directorio con el mismo timestamp/nombre que consta en `supabase_migrations.schema_migrations` para que GitHub pueda reconstruir y auditar el backend sin depender únicamente del historial alojado en Supabase.
+Las migraciones nuevas aplicadas durante esta sesión se copian a este directorio con el mismo timestamp/nombre que consta en `supabase_migrations.schema_migrations` para que GitHub pueda reconstruir y auditar el backend sin depender únicamente del historial alojado en Supabase.
 
 ## Convención de seguridad
 
 Las migraciones del campus se ejecutan como `postgres`. Los privilegios por defecto de ese rol en `public` ya no conceden permisos a `anon` sobre tablas, secuencias o funciones nuevas. Si un objeto debe ser público, el permiso se concede de forma explícita y mínima en su propia migración.
 
 Los defaults internos administrados por la plataforma (`supabase_admin`) no se modifican desde estas migraciones; cualquier objeto de plataforma se revisa por separado y no se considera parte de la superficie pública del campus por defecto.
+
+La emisión/revocación legacy de `program_certificates` se conserva únicamente como código histórico sin `EXECUTE` para `anon` ni `authenticated`. La ruta soportada es la v2 (`student_certificates_v2`), ligada a expediente final y nombre confirmado.
