@@ -30,7 +30,7 @@ Estado actual:
 - v55: los enlaces de invitación dejan de copiar la URL del preview y apuntan exclusivamente al dominio de producción.
 - v56: aviso explícito en preview para no enviar el enlace de activación antes de publicar la release.
 
-Existe una Edge Function de preview separada de producción. El preview está protegido por clave, `noindex`, `no-store`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` restrictiva y CSP específica.
+Existe una Edge Function de preview separada de producción. El preview está protegido por clave, `noindex`, `no-store`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` restrictiva, `Cross-Origin-Resource-Policy: same-origin` y CSP específica. La clave de preview se rotó durante la auditoría y no se versiona.
 
 ## Cambios acumulados principales
 
@@ -61,12 +61,16 @@ Existe una Edge Function de preview separada de producción. El preview está pr
 - Códigos de activación de 24 caracteres hexadecimales (96 bits).
 - Caducidad por defecto 7 días.
 - Bloqueo 15 minutos tras 5 intentos fallidos.
-- Contraseña de activación: mínimo 12 caracteres y 3 tipos de caracteres.
+- Contraseña de activación: mínimo 12 caracteres y 3 tipos de caracteres; máximo 256.
 - Admin puede crear, regenerar, cancelar y copiar enlace de activación.
 - Una invitación aceptada crea matrícula real y el alumnado aparece por UUID.
 - RLS de invitaciones acotada al rol Admin del programa.
 - Endpoint público no devuelve `user_id` ni detalles innecesarios.
 - En preview, el enlace compartible ya no incluye la clave del preview: siempre se genera contra producción y se muestra una advertencia mientras la release no esté publicada.
+- El endpoint de activación limita payload a 4 KiB y exige códigos nuevos de 24 hex; la compatibilidad con códigos antiguos de 12 se retiró porque no había invitaciones activas dependientes de ese formato.
+- La matrícula ya no se concede únicamente por coincidencia de email: el trigger exige un hash de invitación incluido en `app_metadata` por la Edge Function después de validar el código.
+- Si la cuenta Auth se crea pero la matrícula no queda aceptada, la Edge Function elimina la cuenta recién creada para evitar huérfanas.
+- `admin_create_student_invite_v2` es ahora `SECURITY INVOKER`; la autorización depende de rol Admin + RLS. También permite reutilizar correctamente una invitación cancelada.
 
 ### Identidad dinámica y progreso · 14V
 
@@ -95,10 +99,14 @@ Existe una Edge Function de preview separada de producción. El preview está pr
 - Sin `service_role` en frontend.
 - Directorio Admin desde matrículas reales.
 - `pioc-publish-web` y accesos especiales legacy deshabilitados.
+- `pioc-campus`, antiguo publicador con privilegios de servidor, retirado con HTTP 410.
+- Trigger histórico `pioc_bootstrap_allowed_user` eliminado: `private.allowed_emails` ya no concede acceso a cuentas Auth nuevas.
+- El único trigger de onboarding sobre `auth.users` es `academy_enroll_pending_invite`, ligado al claim validado del código de activación.
+- Las funciones privadas que sirven exclusivamente como triggers ya no son ejecutables directamente por `anon` ni `authenticated`.
 - `public.is_admin()` no es ejecutable por `anon`.
 - Única función `public` ejecutable por `anon`: `verify_master_certificate_v2(text)`.
 - Una cuenta sin invitación/matrícula/rol no obtiene acceso académico.
-- `academy_frontend_assets` y `academy_frontend_chunks`: sin lectura anónima; lectura autenticada limitada por RLS a Admin.
+- `academy_frontend_assets`, `academy_frontend_chunks` y `academy_frontend_releases`: sin lectura anónima; acceso administrativo autenticado según RLS.
 - `academy_backend_meta`: el login solo puede leer las columnas mínimas `product_id`, `schema_version`, `curriculum_version`, `status`, `updated_at`; `notes` ya no es legible por `anon` ni por el rol genérico `authenticated`.
 
 ## QA técnico ejecutado
@@ -122,16 +130,21 @@ Existe una Edge Function de preview separada de producción. El preview está pr
 - verificador con código inválido: únicamente `valid:false / status:not_found`.
 - constructor de certificado: sin email/teléfono y exige nombre confirmado.
 - funciones públicas anónimas: únicamente verificador v2.
-- frontend assets/chunks públicos: CERRADO.
+- frontend assets/chunks/manifests públicos: CERRADO.
 - consulta pública mínima de `academy_backend_meta`: PASS tras reducir privilegios por columna.
 - RPC académica autenticada comprobada tras el cambio de privilegios: PASS.
+- triggers privados directamente ejecutables por `anon`/`authenticated`: 0.
+- usuarios Auth actuales: 2 perfiles reales; 2 roles Admin y 1 rol Alumna.
+- trigger legacy de allowlist en `auth.users`: retirado.
+- onboarding por invitación ligado a hash validado de servicio: aplicado.
 
 ## Supabase Advisors
 
 Seguridad pendiente:
 
 - `Leaked Password Protection`: desactivado; requiere configuración de Auth fuera de las acciones disponibles en este conector.
-- `admin_create_student_invite_v2`: único `SECURITY DEFINER` público ejecutable por `authenticated`; es intencionado porque consulta Auth y exige rol Admin del programa antes de consultar/escribir.
+
+El aviso anterior de `admin_create_student_invite_v2` como `SECURITY DEFINER` público ya está resuelto: la función es ahora `SECURITY INVOKER`. El Security Advisor no devuelve actualmente ningún otro aviso de función/DDL, aparte de Leaked Password Protection.
 
 Rendimiento:
 
