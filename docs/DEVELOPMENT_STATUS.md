@@ -50,6 +50,7 @@ Existe además una Edge Function de **preview de desarrollo** separada de produc
 - Bloqueo backend de emisión si la ficha no está confirmada.
 - El snapshot del certificado usa el nombre confirmado y no incluye email/teléfono.
 - Verificador público `verify_master_certificate_v2` reducido a nombre, programa, finalización, estado y código.
+- El verificador legacy `verify_program_certificate` ya no es ejecutable por `anon` ni `authenticated`.
 - Estado de ficha visible para Admin.
 - Certificado emitido visible desde Mi perfil cuando exista.
 - La información legal completa sigue pendiente de responsable/email reales.
@@ -91,6 +92,9 @@ Backend:
 
 Todos los RPC de administración requieren sesión autenticada y rol Admin del programa.
 
+- La RLS de `student_invites` está ahora acotada al rol Admin del programa, no a un rol global heredado.
+- `get_admin_student_invites_v2`, `admin_generate_student_activation_code` y `admin_cancel_student_invite_v2` usan `SECURITY INVOKER` y se apoyan en RLS.
+- `admin_create_student_invite_v2` conserva `SECURITY DEFINER` porque también verifica si ya existe una cuenta en Auth; antes de cualquier escritura comprueba el rol Admin del programa.
 - Los códigos nuevos tienen 24 caracteres hexadecimales (96 bits de entropía).
 - Caducidad por defecto: 7 días.
 - Tras 5 códigos incorrectos se bloquea la activación durante 15 minutos.
@@ -133,25 +137,30 @@ Frontend v52:
 
 ### Backend de invitaciones
 
-Se ejecutó QA transaccional con una invitación ficticia temporal:
+Se ejecutó QA transaccional con invitaciones ficticias temporales antes y después del endurecimiento RLS:
 
 - lectura Admin de invitaciones: PASS
 - creación de invitación: PASS
 - código de 24 caracteres: PASS
 - cancelación: PASS
+- política RLS por Admin del programa: PASS
 - limpieza del dato de QA: PASS
 
 No se modificó la invitación real pendiente durante estas pruebas.
+
+### Certificación pública
+
+- `verify_program_certificate` legacy: `anon=false`, `authenticated=false`.
+- `verify_master_certificate_v2`: `anon=true` y es el único verificador público previsto.
 
 ## Supabase Advisors
 
 ### Seguridad
 
-Aviso de configuración pendiente:
+Avisos actuales:
 
-- Leaked Password Protection: desactivado.
-
-No se ha cambiado automáticamente porque el conector actual no expone la configuración de Auth necesaria.
+- `Leaked Password Protection`: desactivado.
+- `admin_create_student_invite_v2`: aviso por ser `SECURITY DEFINER` ejecutable por usuarios autenticados. Es intencionado y el propio RPC exige rol Admin del programa antes de consultar Auth o escribir la invitación. Los otros RPC de invitaciones ya se han pasado a `SECURITY INVOKER`.
 
 ### Rendimiento
 
