@@ -17,9 +17,11 @@ Supabase mantiene un alias estable al asset de trabajo más reciente:
 
 Estado actual:
 
-- versión de desarrollo: **42**
-- SHA-256: `3ffd0b612f25173c5ead566fcf24494e99b56ffba2bd52ab93735661e8e70cd2`
-- asset histórico equivalente: `development-14r-email-login-only-index.html`
+- versión de desarrollo: **43**
+- SHA-256: `77c1256dfe52e118ee2eb49f7ab7427340756307cacd8200534e130f20c81fdd`
+- asset histórico equivalente: `development-14t-home-route-actions-index.html`
+
+Existe además una Edge Function de **preview de desarrollo** separada de producción, protegida por una clave no publicada en el repositorio, con `noindex`, `no-store` y cabeceras de versión/hash. Sirve para QA visual sin sustituir Netlify producción.
 
 ## Cambios acumulados principales
 
@@ -29,6 +31,7 @@ Estado actual:
 - Restauración de posición al volver desde un módulo al Programa.
 - El acceso a un módulo en curso continúa por la primera clase pendiente en lugar de volver siempre a la clase 1.
 - Los CTAs del Programa distinguen `Empezar módulo`, `Continuar módulo` y `Revisar módulo`.
+- La sección `Ruta cercana` de Inicio usa una acción contextual por módulo: empezar, continuar, preparar entrega, ver entrega, revisar feedback o revisar módulo según el estado real.
 - Mi perfil integrado en la tarjeta inferior izquierda de escritorio.
 - Avatar de perfil compacto en móvil.
 - Copy de botones más explícito y jerarquía de CTA revisada.
@@ -78,7 +81,7 @@ Estado actual:
 
 ## QA estático del asset actual
 
-Comprobado durante las iteraciones 34–42:
+Comprobado durante las iteraciones 34–43:
 
 - documento termina en `</html>`: PASS
 - sin HUD Netlify embebido: PASS
@@ -90,6 +93,7 @@ Comprobado durante las iteraciones 34–42:
 - navegación contextual al Programa: PASS
 - restauración del contexto del Programa: PASS
 - continuación inteligente de módulo: PASS
+- acciones contextuales coherentes en Inicio: PASS
 - protección de cambios sin guardar del perfil: PASS
 - protección de drawers editables: PASS
 - loading en clase/borrador/entrega/evaluación/perfil: PASS
@@ -118,7 +122,7 @@ Hay avisos informativos de índices aún no utilizados y varias políticas RLS p
 ## Pendiente antes de producción
 
 1. Cerrar los datos reales de protección de datos: responsable y email de privacidad.
-2. Ejecutar QA en navegador sobre una URL desplegada de esta versión.
+2. Ejecutar QA en navegador sobre el preview de desarrollo.
 3. Probar 320/360/390/412 px, tablet y escritorio.
 4. Login real, recarga, Alumna/Admin, perfil, entrega, evaluación y certificado.
 5. Revisar la configuración `Leaked Password Protection` de Supabase Auth.
