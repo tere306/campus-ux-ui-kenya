@@ -28,5 +28,8 @@ El proyecto contiene migraciones desde `initial_pioc_schema` (2026-08-31) hasta 
 - `disable_legacy_public_certificate_verifier`
 - `revoke_anon_public_is_admin_execute`
 - `lock_down_public_is_admin_execute`
+- `lock_down_frontend_asset_storage`
+- `index_student_learning_journal_program_id`
+- `minimize_public_backend_meta_columns`
 
 Las migraciones nuevas aplicadas durante esta sesión se están copiando a este directorio con el mismo timestamp/nombre que consta en `supabase_migrations.schema_migrations` para que GitHub pueda reconstruir y auditar el backend sin depender únicamente del historial alojado en Supabase.
