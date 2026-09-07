@@ -118,11 +118,15 @@ Deno.serve(async (req: Request) => {
       }, attempts >= 5 ? 429 : 400);
     }
 
-    const { error: createError } = await admin.auth.admin.createUser({
+    const { data: createData, error: createError } = await admin.auth.admin.createUser({
       email: normalizedEmail,
       password: pwd,
       email_confirm: true,
-      user_metadata: { real_name: invite.real_name, activation_source: "student_invite" },
+      user_metadata: { real_name: invite.real_name },
+      app_metadata: {
+        activation_source: "student_invite",
+        student_invite_hash: suppliedHash,
+      },
     });
 
     if (createError) {
@@ -133,12 +137,17 @@ Deno.serve(async (req: Request) => {
       return json(req, { error: "No se pudo crear la cuenta. Inténtalo de nuevo o solicita una invitación nueva." }, 400);
     }
 
-    await admin.from("student_invites").update({
-      activation_used_at: new Date().toISOString(),
-      activation_code_hash: null,
-      activation_attempts: 0,
-      activation_locked_until: null,
-    }).eq("id", invite.id);
+    const createdUserId = createData?.user?.id;
+    const { data: acceptedInvite, error: acceptedError } = await admin
+      .from("student_invites")
+      .select("status,activation_used_at")
+      .eq("id", invite.id)
+      .maybeSingle();
+
+    if (acceptedError || acceptedInvite?.status !== "accepted" || !acceptedInvite.activation_used_at) {
+      if (createdUserId) await admin.auth.admin.deleteUser(createdUserId).catch(() => undefined);
+      return json(req, { error: "No se pudo completar la matrícula. La cuenta no se ha conservado; vuelve a intentarlo." }, 500);
+    }
 
     return json(req, {
       ok: true,
