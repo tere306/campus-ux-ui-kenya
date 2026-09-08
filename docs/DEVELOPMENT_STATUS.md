@@ -15,8 +15,8 @@
 
 Alias estable en Supabase: `development-current-index.html`.
 
-- versión: **70**
-- SHA-256: `9cb2d3ca1bb853ec7387a8a1da58390dce1bf6a0c855a5fa6136eba0ff993cb4`
+- versión: **71**
+- SHA-256: `f3b4aadee130d94222f0faa351e6d488f99d86bfee57bc876ce0e05b9c8fb004`
 - v53: identidad y progreso por UUID.
 - v54: caché local por cuenta y purga en logout.
 - v55–57: enlaces de invitación seguros y formato exclusivamente 24 hex.
@@ -26,6 +26,7 @@ Alias estable en Supabase: `development-current-index.html`.
 - v65–68: ampliación de escape de contenido dinámico en Admin, currículo y drawer de alumna.
 - v69: la recuperación por email no puede iniciarse desde preview para evitar callbacks accidentales a producción; el flujo real queda reservado al origen final.
 - v70: logout con estado explícito de revocación remota; la limpieza local sigue siendo fail-safe y se avisa si Supabase no pudo confirmar la revocación.
+- v71: recovery inválido/caducado falla cerrado: elimina la sesión temporal local y sanea `token_hash`, `type` y fragmento de la URL antes de exigir un enlace nuevo.
 
 El preview de desarrollo sigue separado de producción y aplica `noindex`, `no-store`, anti-frame, `nosniff`, `no-referrer`, Permissions-Policy y CSP específica. La clave de preview no se versiona, pero actualmente permanece incrustada en el source desplegado de `campus-development-preview`; debe externalizarse a runtime secret y rotarse antes de producción.
 
@@ -74,6 +75,7 @@ El preview de desarrollo sigue separado de producción y aplica `noindex`, `no-s
 - Refresh serializado; un fallo de refresh elimina la sesión local y la marca expirada.
 - Caché académica local asociada a la cuenta; cambio de cuenta o logout elimina la caché sensible anterior.
 - Logout intenta revocación remota y siempre limpia sesión/caché local; v70 avisa si la revocación remota no pudo confirmarse.
+- Recovery inválido/caducado elimina la sesión temporal local y limpia parámetros de credencial de la URL antes de pedir un enlace nuevo.
 - Supabase es la autoridad académica.
 
 ## Seguridad e infraestructura
@@ -94,11 +96,12 @@ Matrices principales:
 - `docs/QA_PREPRODUCCION_V68.md`
 - `docs/QA_AUTH_RECOVERY_V69.md`
 - `docs/QA_SESSION_REVOCATION_V70.md`
+- `docs/QA_RECOVERY_FAIL_CLOSED_V71.md`
 - `docs/QA_INVITE_ACTIVATION_2026-09-08.md`
 - `docs/QA_INVITE_ATOMIC_LOCKOUT_2026-09-08.md`
 - `docs/QA_RLS_PRIVILEGES_2026-09-08.md`
 
-Estado v70:
+Estado v71:
 - 143 botones de apertura / 143 cierres: PASS.
 - 5 formularios de apertura / 5 cierres: PASS.
 - sin `service_role` en frontend.
@@ -106,6 +109,7 @@ Estado v70:
 - sesión Auth en `sessionStorage` y refresh serializado.
 - recuperación v69 preservada.
 - logout v70 conserva limpieza local y expone fallo de revocación remota.
+- recovery inválido v71 elimina sesión temporal y sanea URL de credenciales.
 
 ## Supabase Advisors
 
@@ -116,8 +120,8 @@ Rendimiento: aparecen índices todavía no utilizados y políticas permisivas su
 ## Estimación de preproducción
 
 - backend/seguridad automática: ~98%
-- frontend funcional/QA estático: ~97%
-- avance global: ~88–90%
+- frontend funcional/QA estático: ~97–98%
+- avance global: ~89–91%
 
 Lo restante es sobre todo validación real y configuración externa, no construcción base.
 
