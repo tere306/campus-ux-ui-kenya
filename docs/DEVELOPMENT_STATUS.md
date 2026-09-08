@@ -15,18 +15,17 @@
 
 Alias estable en Supabase: `development-current-index.html`.
 
-- versión: **68**
-- SHA-256: `2892a974c167b281bdfcf651c1c46f7ceab9ef7157db16f0adf09edf3e5f32b1`
+- versión: **70**
+- SHA-256: `9cb2d3ca1bb853ec7387a8a1da58390dce1bf6a0c855a5fa6136eba0ff993cb4`
 - v53: identidad y progreso por UUID.
 - v54: caché local por cuenta y purga en logout.
 - v55–57: enlaces de invitación seguros y formato exclusivamente 24 hex.
 - v58–59: semántica de botones y accesibilidad de buscadores.
 - v60–63: escape/saneado de identidad, recursos y encabezados renderizados mediante `innerHTML`.
-- v64: estado/copy operativo alineado con la realidad actual; currículo `4.14D-12x48-full` marcado como `published` igual que en Supabase.
-- v65: escape de `admin next action`.
-- v66: escape de CTA de alumna en Admin.
-- v67: escape de etiquetas de currículo.
-- v68: escape de `student drawer next action`.
+- v64: estado/copy operativo alineado con Supabase.
+- v65–68: ampliación de escape de contenido dinámico en Admin, currículo y drawer de alumna.
+- v69: la recuperación por email no puede iniciarse desde preview para evitar callbacks accidentales a producción; el flujo real queda reservado al origen final.
+- v70: logout con estado explícito de revocación remota; la limpieza local sigue siendo fail-safe y se avisa si Supabase no pudo confirmar la revocación.
 
 El preview de desarrollo sigue separado de producción y aplica `noindex`, `no-store`, anti-frame, `nosniff`, `no-referrer`, Permissions-Policy y CSP específica. La clave de preview no se versiona, pero actualmente permanece incrustada en el source desplegado de `campus-development-preview`; debe externalizarse a runtime secret y rotarse antes de producción.
 
@@ -52,7 +51,6 @@ El preview de desarrollo sigue separado de producción y aplica `noindex`, `no-s
 - Email/teléfono fuera del certificado y del verificador público.
 - Verificador público v2 limitado a nombre, programa, finalización, estado y código.
 - Verificador legacy y rutas legacy de emisión/revocación sin ejecución para `anon` ni `authenticated`.
-- En el momento de retirar la emisión legacy había 0 certificados legacy.
 
 ### Invitaciones y onboarding
 
@@ -60,18 +58,22 @@ El preview de desarrollo sigue separado de producción y aplica `noindex`, `no-s
 - Código 24 hex / 96 bits, caducidad por defecto 7 días.
 - Bloqueo 15 min tras 5 fallos.
 - Contraseña 12–256 caracteres y mínimo 3 clases.
-- La matrícula exige hash de invitación validado por la Edge Function en `app_metadata`; no basta coincidencia de email.
+- La matrícula exige hash de invitación validado en `app_metadata`; no basta coincidencia de email.
 - Una cuenta Auth creada sin matrícula aceptada se elimina para evitar huérfanas.
+- Estados de invitación caducada/bloqueada no se revelan antes de demostrar un código correcto.
+- El contador de intentos fallidos es atómico mediante `record_student_invite_failure_v2`; ejecutable solo por `service_role`.
 - Allowlist/bootstrap legacy retirado.
 - `admin_create_student_invite_v2` es `SECURITY INVOKER` + rol Admin + RLS.
 
-### Identidad, progreso y caché
+### Identidad, progreso, caché y sesión
 
 - Sin gates funcionales por nombres concretos.
 - Sincronización mediante `user_id` real.
 - Backups de progreso ligados al UUID activo.
 - Sesión Auth en `sessionStorage`.
+- Refresh serializado; un fallo de refresh elimina la sesión local y la marca expirada.
 - Caché académica local asociada a la cuenta; cambio de cuenta o logout elimina la caché sensible anterior.
+- Logout intenta revocación remota y siempre limpia sesión/caché local; v70 avisa si la revocación remota no pudo confirmarse.
 - Supabase es la autoridad académica.
 
 ## Seguridad e infraestructura
@@ -81,25 +83,29 @@ El preview de desarrollo sigue separado de producción y aplica `noindex`, `no-s
 - `anon`: 0 privilegios de tabla, 0 escritura, 0 secuencias, 0 `MAINTAIN`; solo 5 SELECT de columna mínimos en `academy_backend_meta`.
 - Assets/chunks/manifests de frontend sin lectura anónima.
 - Bucket histórico `pioc-web` privado.
-- Funciones privadas usadas solo como triggers sin ejecución directa para `anon`/`authenticated`.
+- Funciones privadas de trigger sin ejecución directa para `anon`/`authenticated`.
 - Todas las funciones `SECURITY DEFINER` revisadas tienen `search_path` explícito.
 - Única RPC pública para `anon`: `verify_master_certificate_v2(text)`.
-- `publish-frontend-release` retirado a HTTP 410: ya no existe un publicador de frontend con `service_role`; la publicación objetivo es Netlify.
-- Los demás publicadores/helpers legacy permanecen neutralizados con 410.
+- `publish-frontend-release` y otros publicadores/helpers legacy permanecen neutralizados con HTTP 410.
 
-## QA técnico v68
+## QA técnico actual
 
-Matriz ampliada: `docs/QA_PREPRODUCCION_V68.md`.
+Matrices principales:
+- `docs/QA_PREPRODUCCION_V68.md`
+- `docs/QA_AUTH_RECOVERY_V69.md`
+- `docs/QA_SESSION_REVOCATION_V70.md`
+- `docs/QA_INVITE_ACTIVATION_2026-09-08.md`
+- `docs/QA_INVITE_ATOMIC_LOCKOUT_2026-09-08.md`
+- `docs/QA_RLS_PRIVILEGES_2026-09-08.md`
 
+Estado v70:
 - 143 botones de apertura / 143 cierres: PASS.
 - 5 formularios de apertura / 5 cierres: PASS.
-- 5 submits reales: consistente con la matriz v64.
 - sin `service_role` en frontend.
 - sin `history.back()`.
-- 5 enlaces generados con `target="_blank"` llevan `rel="noopener"`.
-- la sexta ocurrencia textual de `target="_blank"` corresponde al selector JS que refuerza runtime con `noopener`, `noreferrer` y `aria-label`; no es un enlace sin protección.
-- recursos externos revisados siguen pasando por `safeHttpHref`.
-- v65–v68 amplían el escape de contenido dinámico en Admin, currículo y drawer de alumna.
+- sesión Auth en `sessionStorage` y refresh serializado.
+- recuperación v69 preservada.
+- logout v70 conserva limpieza local y expone fallo de revocación remota.
 
 ## Supabase Advisors
 
@@ -109,20 +115,20 @@ Rendimiento: aparecen índices todavía no utilizados y políticas permisivas su
 
 ## Estimación de preproducción
 
-- backend/seguridad automática: ~97%
-- frontend funcional/QA estático: ~96%
-- avance global: ~86–89%
+- backend/seguridad automática: ~98%
+- frontend funcional/QA estático: ~97%
+- avance global: ~88–90%
 
-Lo restante es sobre todo validación real, no construcción.
+Lo restante es sobre todo validación real y configuración externa, no construcción base.
 
 ## Pendiente antes de producción
 
 1. QA visual responsive: 320/360/390/412, tablet y escritorio.
-2. Login, F5, logout, vistas Alumna/Admin y cuenta con ambos roles.
+2. Login, F5, refresh, logout normal y logout con fallo de red; vistas Alumna/Admin y cuenta dual-role.
 3. Invitación real de segunda cuenta → activación → primer login → aparición en Admin.
 4. Clase/progreso → entrega → evaluación → feedback → desbloqueo con dos cuentas.
 5. Cambio de cuenta en el mismo navegador para confirmar purga de caché.
-6. Recuperación de contraseña real y redirect del email.
+6. Recuperación de contraseña real y redirect del email desde el origen final autorizado.
 7. Responsable legal y email de privacidad reales; completar aviso antes de alumnado real.
 8. Activar/revisar Leaked Password Protection en Supabase Auth.
 9. Externalizar/rotar la clave de `campus-development-preview` y verificar acceso autorizado/no autorizado.
