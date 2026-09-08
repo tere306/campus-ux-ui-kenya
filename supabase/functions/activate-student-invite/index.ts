@@ -70,15 +70,9 @@ Deno.serve(async (req: Request) => {
     const normalizedCode = String(parsed.code || "").trim().toUpperCase();
     const pwd = String(parsed.password || "");
 
-    if (!normalizedEmail || !normalizedCode || !pwd) {
-      return json(req, { error: "Correo, código y contraseña son obligatorios." }, 400);
-    }
-    if (normalizedEmail.length > 254 || !EMAIL_RE.test(normalizedEmail)) {
-      return json(req, { error: "Introduce un correo válido." }, 400);
-    }
-    if (!/^[A-F0-9]{24}$/.test(normalizedCode)) {
-      return json(req, { error: INVALID_INVITE }, 400);
-    }
+    if (!normalizedEmail || !normalizedCode || !pwd) return json(req, { error: "Correo, código y contraseña son obligatorios." }, 400);
+    if (normalizedEmail.length > 254 || !EMAIL_RE.test(normalizedEmail)) return json(req, { error: "Introduce un correo válido." }, 400);
+    if (!/^[A-F0-9]{24}$/.test(normalizedCode)) return json(req, { error: INVALID_INVITE }, 400);
     const pwdError = passwordError(pwd);
     if (pwdError) return json(req, { error: pwdError }, 400);
 
@@ -108,60 +102,39 @@ Deno.serve(async (req: Request) => {
       const locked = invite.activation_locked_until && new Date(invite.activation_locked_until).getTime() > now;
       if (expired || invite.activation_used_at || locked) return json(req, { error: INVALID_INVITE }, 400);
 
-      const attempts = Number(invite.activation_attempts || 0) + 1;
-      const patch: Record<string, unknown> = { activation_attempts: attempts };
-      if (attempts >= 5) patch.activation_locked_until = new Date(now + 15 * 60 * 1000).toISOString();
-      const { error: attemptError } = await admin.from("student_invites").update(patch).eq("id", invite.id);
-      if (attemptError) return json(req, { error: "No se pudo validar la invitación." }, 500);
-      return json(req, {
-        error: attempts >= 5
-          ? "Código incorrecto. La activación se ha bloqueado durante 15 minutos."
-          : INVALID_INVITE
-      }, attempts >= 5 ? 429 : 400);
+      const { data: failureRows, error: failureError } = await admin.rpc("record_student_invite_failure_v2", { p_invite: invite.id });
+      if (failureError) return json(req, { error: "No se pudo validar la invitación." }, 500);
+      const failure = Array.isArray(failureRows) ? failureRows[0] : failureRows;
+      if (!failure) return json(req, { error: INVALID_INVITE }, 400);
+      const attempts = Number(failure.attempts || 0);
+      return json(req, { error: attempts >= 5 ? "Código incorrecto. La activación se ha bloqueado durante 15 minutos." : INVALID_INVITE }, attempts >= 5 ? 429 : 400);
     }
 
-    if (invite.activation_locked_until && new Date(invite.activation_locked_until).getTime() > now) {
-      return json(req, { error: "La activación está bloqueada temporalmente por demasiados intentos. Inténtalo más tarde." }, 429);
-    }
-    if (!invite.activation_expires_at || new Date(invite.activation_expires_at).getTime() < now || invite.activation_used_at) {
-      return json(req, { error: "El código no está disponible o ha caducado. Solicita una invitación nueva." }, 410);
-    }
+    if (invite.activation_locked_until && new Date(invite.activation_locked_until).getTime() > now) return json(req, { error: "La activación está bloqueada temporalmente por demasiados intentos. Inténtalo más tarde." }, 429);
+    if (!invite.activation_expires_at || new Date(invite.activation_expires_at).getTime() < now || invite.activation_used_at) return json(req, { error: "El código no está disponible o ha caducado. Solicita una invitación nueva." }, 410);
 
     const { data: createData, error: createError } = await admin.auth.admin.createUser({
       email: normalizedEmail,
       password: pwd,
       email_confirm: true,
       user_metadata: { real_name: invite.real_name },
-      app_metadata: {
-        activation_source: "student_invite",
-        student_invite_hash: suppliedHash,
-      },
+      app_metadata: { activation_source: "student_invite", student_invite_hash: suppliedHash },
     });
 
     if (createError) {
       const msg = String(createError.message || "");
-      if (/already|registered|exists/i.test(msg)) {
-        return json(req, { error: "Ya existe una cuenta para este correo. Entra con tu contraseña o recupera el acceso." }, 409);
-      }
+      if (/already|registered|exists/i.test(msg)) return json(req, { error: "Ya existe una cuenta para este correo. Entra con tu contraseña o recupera el acceso." }, 409);
       return json(req, { error: "No se pudo crear la cuenta. Inténtalo de nuevo o solicita una invitación nueva." }, 400);
     }
 
     const createdUserId = createData?.user?.id;
-    const { data: acceptedInvite, error: acceptedError } = await admin
-      .from("student_invites")
-      .select("status,activation_used_at")
-      .eq("id", invite.id)
-      .maybeSingle();
-
+    const { data: acceptedInvite, error: acceptedError } = await admin.from("student_invites").select("status,activation_used_at").eq("id", invite.id).maybeSingle();
     if (acceptedError || acceptedInvite?.status !== "accepted" || !acceptedInvite.activation_used_at) {
       if (createdUserId) await admin.auth.admin.deleteUser(createdUserId).catch(() => undefined);
       return json(req, { error: "No se pudo completar la matrícula. La cuenta no se ha conservado; vuelve a intentarlo." }, 500);
     }
 
-    return json(req, {
-      ok: true,
-      message: "Cuenta activada correctamente. Ya puedes entrar al campus."
-    });
+    return json(req, { ok: true, message: "Cuenta activada correctamente. Ya puedes entrar al campus." });
   } catch (e) {
     console.error(e);
     return json(req, { error: "Error inesperado durante la activación." }, 500);
