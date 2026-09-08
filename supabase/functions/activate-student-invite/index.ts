@@ -50,6 +50,8 @@ function passwordError(password: string) {
   return "";
 }
 
+const INVALID_INVITE = "No se pudo validar la invitación. Revisa el correo y el código.";
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
   if (req.method !== "POST") return json(req, { error: "Método no permitido." }, 405);
@@ -75,7 +77,7 @@ Deno.serve(async (req: Request) => {
       return json(req, { error: "Introduce un correo válido." }, 400);
     }
     if (!/^[A-F0-9]{24}$/.test(normalizedCode)) {
-      return json(req, { error: "No se pudo validar la invitación. Revisa el código e inténtalo de nuevo." }, 400);
+      return json(req, { error: INVALID_INVITE }, 400);
     }
     const pwdError = passwordError(pwd);
     if (pwdError) return json(req, { error: pwdError }, 400);
@@ -95,27 +97,34 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (inviteError) return json(req, { error: "No se pudo validar la invitación." }, 500);
-    if (!invite) return json(req, { error: "No se pudo validar la invitación. Revisa el correo y el código." }, 400);
+    if (!invite?.activation_code_hash) return json(req, { error: INVALID_INVITE }, 400);
 
     const now = Date.now();
-    if (invite.activation_locked_until && new Date(invite.activation_locked_until).getTime() > now) {
-      return json(req, { error: "La activación está bloqueada temporalmente por demasiados intentos. Inténtalo más tarde." }, 429);
-    }
-    if (!invite.activation_code_hash || !invite.activation_expires_at || new Date(invite.activation_expires_at).getTime() < now || invite.activation_used_at) {
-      return json(req, { error: "El código no está disponible o ha caducado. Solicita una invitación nueva." }, 410);
-    }
-
     const suppliedHash = await sha256Hex(normalizedCode);
-    if (!safeEqualHex(suppliedHash, String(invite.activation_code_hash))) {
+    const hashMatches = safeEqualHex(suppliedHash, String(invite.activation_code_hash));
+
+    if (!hashMatches) {
+      const expired = !invite.activation_expires_at || new Date(invite.activation_expires_at).getTime() < now;
+      const locked = invite.activation_locked_until && new Date(invite.activation_locked_until).getTime() > now;
+      if (expired || invite.activation_used_at || locked) return json(req, { error: INVALID_INVITE }, 400);
+
       const attempts = Number(invite.activation_attempts || 0) + 1;
       const patch: Record<string, unknown> = { activation_attempts: attempts };
       if (attempts >= 5) patch.activation_locked_until = new Date(now + 15 * 60 * 1000).toISOString();
-      await admin.from("student_invites").update(patch).eq("id", invite.id);
+      const { error: attemptError } = await admin.from("student_invites").update(patch).eq("id", invite.id);
+      if (attemptError) return json(req, { error: "No se pudo validar la invitación." }, 500);
       return json(req, {
         error: attempts >= 5
           ? "Código incorrecto. La activación se ha bloqueado durante 15 minutos."
-          : "No se pudo validar la invitación. Revisa el correo y el código."
+          : INVALID_INVITE
       }, attempts >= 5 ? 429 : 400);
+    }
+
+    if (invite.activation_locked_until && new Date(invite.activation_locked_until).getTime() > now) {
+      return json(req, { error: "La activación está bloqueada temporalmente por demasiados intentos. Inténtalo más tarde." }, 429);
+    }
+    if (!invite.activation_expires_at || new Date(invite.activation_expires_at).getTime() < now || invite.activation_used_at) {
+      return json(req, { error: "El código no está disponible o ha caducado. Solicita una invitación nueva." }, 410);
     }
 
     const { data: createData, error: createError } = await admin.auth.admin.createUser({
