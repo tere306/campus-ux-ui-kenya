@@ -1,6 +1,6 @@
 # Estado de desarrollo
 
-Última actualización: 2026-09-07
+Última actualización: 2026-09-08
 
 ## Producción
 
@@ -15,16 +15,20 @@
 
 Alias estable en Supabase: `development-current-index.html`.
 
-- versión: **64**
-- SHA-256: `6acbca1ff4cdc0b9e5c513a497e77555c9c0117890598a1d551eac9981d66063`
+- versión: **68**
+- SHA-256: `2892a974c167b281bdfcf651c1c46f7ceab9ef7157db16f0adf09edf3e5f32b1`
 - v53: identidad y progreso por UUID.
 - v54: caché local por cuenta y purga en logout.
 - v55–57: enlaces de invitación seguros y formato exclusivamente 24 hex.
 - v58–59: semántica de botones y accesibilidad de buscadores.
 - v60–63: escape/saneado de identidad, recursos y encabezados renderizados mediante `innerHTML`.
 - v64: estado/copy operativo alineado con la realidad actual; currículo `4.14D-12x48-full` marcado como `published` igual que en Supabase.
+- v65: escape de `admin next action`.
+- v66: escape de CTA de alumna en Admin.
+- v67: escape de etiquetas de currículo.
+- v68: escape de `student drawer next action`.
 
-El preview de desarrollo sigue separado de producción, protegido por clave rotada, `noindex`, `no-store`, anti-frame, `nosniff`, `no-referrer`, Permissions-Policy y CSP específica. La clave no se versiona.
+El preview de desarrollo sigue separado de producción y aplica `noindex`, `no-store`, anti-frame, `nosniff`, `no-referrer`, Permissions-Policy y CSP específica. La clave de preview no se versiona, pero actualmente permanece incrustada en el source desplegado de `campus-development-preview`; debe externalizarse a runtime secret y rotarse antes de producción.
 
 ## Funcionalidad cerrada
 
@@ -83,33 +87,31 @@ El preview de desarrollo sigue separado de producción, protegido por clave rota
 - `publish-frontend-release` retirado a HTTP 410: ya no existe un publicador de frontend con `service_role`; la publicación objetivo es Netlify.
 - Los demás publicadores/helpers legacy permanecen neutralizados con 410.
 
-## QA técnico v64
+## QA técnico v68
+
+Matriz ampliada: `docs/QA_PREPRODUCCION_V68.md`.
 
 - 143 botones de apertura / 143 cierres: PASS.
 - 5 formularios de apertura / 5 cierres: PASS.
-- 5 submits reales y 0 botones con tipo implícito: PASS.
-- 28 controles auditados y 0 sin nombre accesible: PASS.
-- referencias `aria-describedby` / `aria-labelledby`: 0 destinos inexistentes.
-- enlaces externos con `target="_blank"`: `noopener` presente.
+- 5 submits reales: consistente con la matriz v64.
 - sin `service_role` en frontend.
 - sin `history.back()`.
-- recursos externos pasan por `safeHttpHref`; título/descripción se escapan.
-- identidad de perfil/alumnas escapada antes de entrar en HTML dinámico.
-- `head()` escapa eyebrow/título/subtítulo.
-- estado curricular embebido coincide con Supabase: `published`.
-- el único `status:'draft'` restante corresponde al estado real de un borrador de entrega.
+- 5 enlaces generados con `target="_blank"` llevan `rel="noopener"`.
+- la sexta ocurrencia textual de `target="_blank"` corresponde al selector JS que refuerza runtime con `noopener`, `noreferrer` y `aria-label`; no es un enlace sin protección.
+- recursos externos revisados siguen pasando por `safeHttpHref`.
+- v65–v68 amplían el escape de contenido dinámico en Admin, currículo y drawer de alumna.
 
 ## Supabase Advisors
 
-Seguridad: solo queda **Leaked Password Protection** desactivado; requiere configuración de Auth fuera de las acciones disponibles aquí.
+Seguridad: solo queda **Leaked Password Protection** desactivado.
 
 Rendimiento: aparecen índices todavía no utilizados y políticas permisivas superpuestas. No se eliminan/fusionan de forma prematura porque el volumen real todavía es mínimo y una refactorización de RLS requiere QA de equivalencia.
 
 ## Estimación de preproducción
 
 - backend/seguridad automática: ~97%
-- frontend funcional/QA estático: ~95%
-- avance global: ~85–88%
+- frontend funcional/QA estático: ~96%
+- avance global: ~86–89%
 
 Lo restante es sobre todo validación real, no construcción.
 
@@ -123,5 +125,6 @@ Lo restante es sobre todo validación real, no construcción.
 6. Recuperación de contraseña real y redirect del email.
 7. Responsable legal y email de privacidad reales; completar aviso antes de alumnado real.
 8. Activar/revisar Leaked Password Protection en Supabase Auth.
-9. Sustituir el deploy público y ejecutar smoke test.
-10. Solo después fusionar `develop` a `main`.
+9. Externalizar/rotar la clave de `campus-development-preview` y verificar acceso autorizado/no autorizado.
+10. Sustituir el deploy público y ejecutar smoke test.
+11. Solo después fusionar `develop` a `main`.
