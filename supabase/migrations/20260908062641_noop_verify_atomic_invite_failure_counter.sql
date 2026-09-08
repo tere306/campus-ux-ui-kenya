@@ -1,0 +1,1 @@
+-- No-op. Supabase migration-history marker created during verification of the atomic invite failure counter.
