@@ -15,8 +15,8 @@
 
 Alias estable en Supabase: `development-current-index.html`.
 
-- versión: **71**
-- SHA-256: `f3b4aadee130d94222f0faa351e6d488f99d86bfee57bc876ce0e05b9c8fb004`
+- versión: **72**
+- SHA-256: `2e42cb4a5330ce150c86327a3888ddaeaba4317311e4e787ab229924fe82b851`
 - v53: identidad y progreso por UUID.
 - v54: caché local por cuenta y purga en logout.
 - v55–57: enlaces de invitación seguros y formato exclusivamente 24 hex.
@@ -27,6 +27,7 @@ Alias estable en Supabase: `development-current-index.html`.
 - v69: la recuperación por email no puede iniciarse desde preview para evitar callbacks accidentales a producción; el flujo real queda reservado al origen final.
 - v70: logout con estado explícito de revocación remota; la limpieza local sigue siendo fail-safe y se avisa si Supabase no pudo confirmar la revocación.
 - v71: recovery inválido/caducado falla cerrado: elimina la sesión temporal local y sanea `token_hash`, `type` y fragmento de la URL antes de exigir un enlace nuevo.
+- v72: minimización de PII local; el email Auth deja de duplicarse en `state.students`/`localStorage` y se limpia el email heredado al reconciliar una identidad remota.
 
 El preview de desarrollo sigue separado de producción y aplica `noindex`, `no-store`, anti-frame, `nosniff`, `no-referrer`, Permissions-Policy y CSP específica. La clave de preview no se versiona, pero actualmente permanece incrustada en el source desplegado de `campus-development-preview`; debe externalizarse a runtime secret y rotarse antes de producción.
 
@@ -76,6 +77,7 @@ El preview de desarrollo sigue separado de producción y aplica `noindex`, `no-s
 - Caché académica local asociada a la cuenta; cambio de cuenta o logout elimina la caché sensible anterior.
 - Logout intenta revocación remota y siempre limpia sesión/caché local; v70 avisa si la revocación remota no pudo confirmarse.
 - Recovery inválido/caducado elimina la sesión temporal local y limpia parámetros de credencial de la URL antes de pedir un enlace nuevo.
+- El email Auth ya no se duplica en el estado persistente local; v72 limpia además cualquier email heredado en `state.students` al reconciliar la cuenta.
 - Supabase es la autoridad académica.
 
 ## Seguridad e infraestructura
@@ -97,11 +99,13 @@ Matrices principales:
 - `docs/QA_AUTH_RECOVERY_V69.md`
 - `docs/QA_SESSION_REVOCATION_V70.md`
 - `docs/QA_RECOVERY_FAIL_CLOSED_V71.md`
+- `docs/QA_DYNAMIC_HTML_XSS_V71.md`
+- `docs/QA_PRIVACY_LOCAL_PII_V72.md`
 - `docs/QA_INVITE_ACTIVATION_2026-09-08.md`
 - `docs/QA_INVITE_ATOMIC_LOCKOUT_2026-09-08.md`
 - `docs/QA_RLS_PRIVILEGES_2026-09-08.md`
 
-Estado v71:
+Estado v72:
 - 143 botones de apertura / 143 cierres: PASS.
 - 5 formularios de apertura / 5 cierres: PASS.
 - sin `service_role` en frontend.
@@ -110,6 +114,8 @@ Estado v71:
 - recuperación v69 preservada.
 - logout v70 conserva limpieza local y expone fallo de revocación remota.
 - recovery inválido v71 elimina sesión temporal y sanea URL de credenciales.
+- auditoría XSS/HTML dinámico v71: PASS sin vía explotable identificada.
+- v72 elimina la copia persistente innecesaria del email Auth y sanea emails heredados del directorio local.
 
 ## Supabase Advisors
 
@@ -120,8 +126,8 @@ Rendimiento: aparecen índices todavía no utilizados y políticas permisivas su
 ## Estimación de preproducción
 
 - backend/seguridad automática: ~98%
-- frontend funcional/QA estático: ~97–98%
-- avance global: ~89–91%
+- frontend funcional/QA estático: ~98%
+- avance global: ~90–92%
 
 Lo restante es sobre todo validación real y configuración externa, no construcción base.
 
@@ -136,5 +142,6 @@ Lo restante es sobre todo validación real y configuración externa, no construc
 7. Responsable legal y email de privacidad reales; completar aviso antes de alumnado real.
 8. Activar/revisar Leaked Password Protection en Supabase Auth.
 9. Externalizar/rotar la clave de `campus-development-preview` y verificar acceso autorizado/no autorizado.
-10. Sustituir el deploy público y ejecutar smoke test.
-11. Solo después fusionar `develop` a `main`.
+10. Revisar desde Dashboard la configuración/retención de Auth Audit Logs cuando haya una vía administrativa compatible.
+11. Sustituir el deploy público y ejecutar smoke test.
+12. Solo después fusionar `develop` a `main`.
