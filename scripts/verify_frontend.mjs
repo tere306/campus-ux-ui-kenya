@@ -5,7 +5,7 @@ const file = 'frontend/development-current/index.html';
 const html = fs.readFileSync(file, 'utf8');
 const failures = [];
 
-const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)].map((match) => match[1]);
+const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<[/]script>/gi)].map((match) => match[1]);
 if (!scripts.length) failures.push('No inline scripts found');
 
 scripts.forEach((code, index) => {
@@ -16,10 +16,10 @@ scripts.forEach((code, index) => {
   }
 });
 
-const versionMatch = html.match(/<!-- Campus UX\\/UI · (?:development|release) v(\\d+) -->/);
+const versionMatch = html.match(/<!-- Campus UX[/]UI · (?:development|release) v(\d+) -->/);
 if (!versionMatch) failures.push('Missing frontend version marker');
 
-const implicitButtons = [...html.matchAll(/<button\\b(?![^>]*\\btype=)[^>]*>/gi)];
+const implicitButtons = [...html.matchAll(/<button\b(?![^>]*\btype=)[^>]*>/gi)];
 if (implicitButtons.length) failures.push(`${implicitButtons.length} button(s) without explicit type`);
 
 const javascriptUrls = [...html.matchAll(/(?:href|src)=(['"])javascript:/gi)];
@@ -51,7 +51,7 @@ console.log(`Inline scripts parsed: ${scripts.length}`);
 console.log(`SHA-256: ${sha256}`);
 
 if (failures.length) {
-  console.error('\\nFrontend verification failed:');
+  console.error('\nFrontend verification failed:');
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exit(1);
 }
