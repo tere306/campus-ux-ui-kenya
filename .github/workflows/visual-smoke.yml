@@ -37,6 +37,13 @@ jobs:
           npm install --no-save --package-lock=false @playwright/test@1.55.0
           npx playwright install --with-deps chromium
 
+      - name: Restore verified campus logo fixture
+        run: |
+          mkdir -p qa-artifacts
+          curl -fsS https://fancy-cranachan-c98e89.netlify.app/campus-logo.webp -o frontend/development-current/campus-logo.webp
+          echo "8feefe3bc225221ee2b15f725cbf597cc51e358b0ada19c95ab2cd0df87c74fd  frontend/development-current/campus-logo.webp" | sha256sum -c -
+          cp frontend/development-current/campus-logo.webp qa-artifacts/recovered-campus-logo.webp
+
       - name: Serve frontend
         run: |
           python3 -m http.server 4173 --directory frontend/development-current >/tmp/campus-http.log 2>&1 &
