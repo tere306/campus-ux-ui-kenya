@@ -30,7 +30,7 @@ for (const ref of new Set(localAssetRefs)) {
   const assetPath = `${publishDir}/${cleanRef}`;
   if (!fs.existsSync(assetPath)) failures.push(`Missing local asset referenced by HTML: ${assetPath}`);
 }
-for (const requiredFile of [`${publishDir}/_headers`, `${publishDir}/_redirects`]) {
+for (const requiredFile of [`${publishDir}/_headers`, `${publishDir}/_redirects`, `${publishDir}/release-manifest.json`]) {
   if (!fs.existsSync(requiredFile)) failures.push(`Missing publish control file: ${requiredFile}`);
 }
 
@@ -83,6 +83,20 @@ for (const [label, ok] of checks) {
 }
 
 const sha256 = crypto.createHash('sha256').update(html).digest('hex');
+
+try {
+  const manifest = JSON.parse(fs.readFileSync(`${publishDir}/release-manifest.json`, 'utf8'));
+  const markerVersion = Number(versionMatch?.[1] || 0);
+  if (manifest.frontend_version !== markerVersion) failures.push(`Release manifest version mismatch: ${manifest.frontend_version} != ${markerVersion}`);
+  if (manifest.html_sha256 !== sha256) failures.push(`Release manifest HTML hash mismatch: ${manifest.html_sha256} != ${sha256}`);
+  for (const [brandFile, expectedHash] of Object.entries(brandFiles)) {
+    const filename = brandFile.split('/').pop();
+    if (manifest.assets?.[filename] !== expectedHash) failures.push(`Release manifest asset hash mismatch: ${filename}`);
+  }
+} catch (error) {
+  failures.push(`Release manifest could not be verified: ${error.message}`);
+}
+
 console.log(`Frontend: ${file}`);
 console.log(`Version marker: v${versionMatch?.[1] ?? 'unknown'}`);
 console.log(`Characters: ${html.length}`);
