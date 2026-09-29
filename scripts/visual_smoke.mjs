@@ -102,12 +102,20 @@ async function measure(page) {
         return rect.width > 0 && rect.height > 0;
       }).length;
 
+    const brokenImages = [...document.images]
+      .filter((img) => {
+        const rect = img.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && (!img.complete || img.naturalWidth === 0);
+      })
+      .map((img) => ({ src: img.getAttribute('src') || '', alt: img.alt || '' }));
+
     return {
       innerWidth,
       scrollWidth,
       overflow: scrollWidth > innerWidth + 2,
       offenders,
       visibleCards,
+      brokenImages,
       title: document.title,
       h1: document.querySelector('#main h1, .login h1')?.textContent?.trim() || '',
     };
@@ -156,6 +164,9 @@ for (const viewport of viewports) {
       if (pageErrors.length) {
         failures.push(`${label}: page errors: ${pageErrors.join(' | ')}`);
       }
+      if (metrics.brokenImages.length) {
+        failures.push(`${label}: broken visible images: ${JSON.stringify(metrics.brokenImages)}`);
+      }
       if (scenario.mode !== 'login' && !metrics.h1) {
         failures.push(`${label}: missing page heading`);
       }
@@ -169,7 +180,7 @@ await browser.close();
 fs.writeFileSync(path.join(outDir, 'visual-smoke-results.json'), JSON.stringify(results, null, 2));
 
 for (const result of results) {
-  console.log(`${result.label}: width=${result.innerWidth}, scrollWidth=${result.scrollWidth}, cards=${result.visibleCards}, h1="${result.h1}"`);
+  console.log(`${result.label}: width=${result.innerWidth}, scrollWidth=${result.scrollWidth}, cards=${result.visibleCards}, brokenImages=${result.brokenImages.length}, h1="${result.h1}"`);
 }
 
 if (failures.length) {
