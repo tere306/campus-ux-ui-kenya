@@ -8,40 +8,60 @@
 - Sitio: `https://fancy-cranachan-c98e89.netlify.app/`.
 - Deploy actual: `6aa2b472eea4967d3570df63`.
 - Publicado: 2026-09-10.
-- Origen del deploy: manual / drop; no está enlazado a un commit.
-- Producción no se ha sustituido durante las mejoras v81–v83.
-- Netlify no tiene variables de entorno configuradas actualmente; no se ha detectado una `service_role` ni secreto backend alojado allí.
+- Origen del deploy: manual / `drop`; no está enlazado a un commit.
+- Producción no se ha sustituido durante las mejoras v81–v86.
+- Netlify tiene 0 variables de entorno configuradas; no se ha detectado una `service_role` ni secreto backend alojado allí.
+- Incidencia conocida del deploy actual: `/campus-logo.webp` devuelve 404. La candidata v85+ elimina esta dependencia y usa assets oficiales ZAVRA versionados.
 
 ## Desarrollo actual
 
-Supabase mantiene el alias operativo `development-current-index.html`, y GitHub contiene ya la fuente completa editable en:
+Supabase mantiene el alias operativo `development-current-index.html`, y GitHub contiene la fuente completa editable y publicable en:
 
-`frontend/development-current/index.html`
+`frontend/development-current/`
 
 Estado actual:
 
-- versión: **83**
-- SHA-256: `150e5440c78613efc53dd01fdb4d37533a0337ef220f8943195310898b807292`
-- snapshot: `development-14zd-layout-resilience-index.html`
+- versión: **86**
+- SHA-256 HTML: `61d55f06c7ee1e15c81cb7149314333cd4412be033e1f3eaee88d48960244715`
+- snapshot Supabase: `development-14zg-visual-polish-index.html`
 - rama GitHub: `develop`
-- `develop`: 121 commits por delante de `main`, 0 por detrás en la comprobación del 2026-09-29.
+- `develop`: **141 commits por delante de `main` y 0 por detrás** en la comprobación del 2026-09-29.
 - PR de preproducción: #1, borrador y mergeable.
-- `netlify.toml` preparado para publicar `frontend/development-current`.
+- `netlify.toml` publica `frontend/development-current`.
+- `_headers` y `_redirects` viven dentro del directorio publicable.
 
 ### Evolución reciente
 
 - v53: identidad y progreso por UUID.
 - v54: caché local por cuenta y purga en logout.
-- v55–57: enlaces de invitación seguros y formato 24 hex.
-- v58–59: semántica de botones y accesibilidad de buscadores.
+- v55–57: invitaciones seguras y formato 24 hex.
+- v58–59: semántica de botones y accesibilidad.
 - v60–68: escape y saneado progresivo de identidad, recursos, Admin, currículo y drawer.
 - v69: recuperación por email aislada del preview.
 - v70: logout con estado explícito de revocación remota.
 - v71: recovery inválido/caducado falla cerrado y sanea credenciales de URL.
 - v72: minimización de PII local.
-- v81: baseline de control operativo y ajuste de preproducción.
-- v82: sincronización del nombre visible del perfil con certificación y escape reforzado de contenido de lecciones.
-- v83: resiliencia de layout para textos largos, tarjetas, botones, etiquetas y recursos; marcador interno de versión corregido.
+- v81: baseline de control operativo.
+- v82: identidad de perfil sincronizada con certificación y render de lecciones endurecido.
+- v83: resiliencia de layout para textos largos, tarjetas, botones, etiquetas y recursos.
+- v84: composición del perfil móvil adaptada a nombres y emails largos.
+- v85: migración de `campus-logo.webp` a los tres assets oficiales ZAVRA, versionados y verificados por SHA.
+- v86: corrección del `\\n` literal visible y pulido de estados de certificación en móvil tras revisión de capturas reales.
+
+## Identidad visual y assets
+
+El paquete de desarrollo usa tres binarios maestros procedentes del repositorio interno de marca:
+
+- `zavra-logo-black.png` — SHA-256 `a720dd56c8d5c0e226a239be35a7c4c4ef810f6c1062a6dd7da55e1ecc1f4f1c`
+- `zavra-logo-white.png` — SHA-256 `fc16b864bec32a2416d917b75de39091f2fefa4255415524459052db7c21dc18`
+- `zavra-logo-black-tagline.png` — SHA-256 `5566affb278928c54d7799919c666d67a8d1eb23edd5e550e56f916745540a43`
+
+Uso:
+- carga sobre fondo oscuro: logo blanco;
+- acceso sobre tarjeta clara: logo negro con tagline;
+- topbar clara: logo negro compacto.
+
+El guard comprueba existencia y hash de los tres archivos.
 
 ## Funcionalidad cerrada
 
@@ -54,9 +74,10 @@ Estado actual:
 - Mi perfil integrado en navegación de escritorio y avatar compacto en móvil.
 - Protección de cambios sin guardar en perfil y drawers.
 - Microtransiciones cortas y `prefers-reduced-motion`.
-- Layout v83 tolerante a nombres, etiquetas y contenidos largos.
-- Recursos de lección apilados en móvil cuando el ancho no permite mantener texto y CTA en línea.
-- Tablas conservan scroll horizontal contenido en su wrapper.
+- Layout tolerante a nombres, etiquetas y contenidos largos.
+- Recursos de lección apilados en móvil cuando el ancho no permite texto + CTA en línea.
+- Tablas con scroll horizontal contenido en su wrapper.
+- Ficha de alumna móvil revisada con identidad extensa ficticia para detectar encajonados.
 
 ### Perfil y certificación
 
@@ -65,7 +86,7 @@ Estado actual:
 - Foto de perfil opcional.
 - Sin DNI/NIE/pasaporte.
 - Confirmación explícita del nombre para certificado.
-- El encabezado de Mi perfil y la vista previa del certificado usan la misma identidad compuesta.
+- Encabezado de Mi perfil y vista previa del certificado comparten identidad compuesta.
 - Emisión v2 bloqueada en backend sin ficha confirmada.
 - Email y teléfono fuera del certificado y del verificador público.
 - Verificador público v2 limitado a datos estrictamente necesarios.
@@ -94,77 +115,93 @@ Estado actual:
 
 - Proyecto Supabase: `pioc-campus`.
 - Todas las tablas públicas observadas tienen RLS habilitado.
-- Assets/chunks/manifests históricos del frontend permanecen protegidos según las políticas existentes.
-- Funciones y rutas legacy privilegiadas se mantienen neutralizadas según las migraciones versionadas.
-- Render dinámico de lecciones v82 escapa resumen, conceptos, teoría, práctica, resultado esperado, objetivos, pasos, errores, defensa oral y checklist.
+- Assets/chunks/manifests históricos permanecen protegidos por las políticas existentes.
+- Funciones/rutas legacy privilegiadas se mantienen neutralizadas según migraciones versionadas.
+- Render dinámico de lecciones v82 escapa resumen, conceptos, teoría, práctica, resultado, objetivos, pasos, errores, defensa oral y checklist.
+- El frontend usa clave Supabase publicable; CI falla si aparecen `service_role` o prefijo `sb_secret_`.
 - Netlify: 0 variables de entorno configuradas en la revisión del 2026-09-29.
 
 ### Supabase Advisors
 
 Seguridad:
 - `Leaked Password Protection` sigue desactivado.
-- `brand_asset_repository` tiene RLS activado y 0 políticas; al ser repositorio interno, permanece inaccesible a clientes hasta que se defina una necesidad real de exposición.
+- `brand_asset_repository` tiene RLS activado y 0 políticas; permanece como repositorio interno no expuesto.
 
 Rendimiento:
-- Existen avisos de índices aún no usados y políticas permisivas superpuestas.
-- No se eliminan índices ni se fusionan políticas sin pruebas de equivalencia de permisos por rol.
+- Hay índices aún no usados y políticas permisivas superpuestas.
+- No se eliminan/fusionan sin QA de equivalencia por rol.
 
-## QA técnico actual
+## QA automático actual
 
-GitHub Actions incluye `.github/workflows/frontend-guard.yml`.
+### Frontend guard
 
-El guard comprueba, entre otras cosas:
+Workflow: `.github/workflows/frontend-guard.yml`.
 
-- parseo sintáctico de todos los scripts inline;
+Comprueba, entre otras cosas:
+
+- parseo de todos los scripts inline;
 - marcador de versión;
 - botones con `type` explícito;
 - ausencia de URLs `javascript:`;
+- ausencia de credenciales backend;
 - sincronización del nombre de perfil;
-- escape de contenido sensible de lecciones;
-- ausencia del render directo anterior de `l.summary`;
-- reglas de resiliencia visual v83.
+- escape de contenido de lecciones;
+- reglas de resiliencia v83/v84/v86;
+- existencia de assets locales referenciados;
+- hashes de logos ZAVRA;
+- presencia de `_headers` y `_redirects`.
 
-Resultado actual del workflow **Frontend guard**: **PASS**.
+Último resultado comprobado: **PASS** en commit `fe93ebe44b56a0f404563a7763801efaea99dd3e`.
 
-Último run verde comprobado:
-- commit: `d5f16d0e94767b74ca7ffe54af3cc2f353ae5a58`
-- conclusión: `success`.
+### Visual smoke
 
-Matrices históricas relevantes:
-- `docs/QA_PREPRODUCCION_V68.md`
-- `docs/QA_AUTH_RECOVERY_V69.md`
-- `docs/QA_SESSION_REVOCATION_V70.md`
-- `docs/QA_RECOVERY_FAIL_CLOSED_V71.md`
-- `docs/QA_DYNAMIC_HTML_XSS_V71.md`
-- `docs/QA_PRIVACY_LOCAL_PII_V72.md`
-- `docs/QA_PROFILE_AVATAR_AND_CONTEXTUAL_PANELS_V74.md`
-- `docs/QA_PROGRESSIVE_PRACTICE_TRACK_V75.md`
-- `docs/QA_STUDENT_WHITE_LABEL_V76.md`
-- `docs/QA_NETLIFY_RELEASE_PACKAGE_V79.md`
-- `docs/QA_LOGIN_CODE_RAIN_V80.md`
+Workflow: `.github/workflows/visual-smoke.yml`.
+
+Ejecuta Chromium real con datos ficticios y sin credenciales reales.
+
+Cobertura actual:
+- 28 escenarios;
+- 1440 × 1000 y 390 × 844;
+- login;
+- 8 vistas de alumna;
+- 5 vistas Admin;
+- nombres/emails deliberadamente largos;
+- reduced motion;
+- detección de errores JavaScript;
+- detección de overflow horizontal;
+- detección de imágenes visibles rotas.
+
+Último resultado comprobado: **PASS**.
+En todos los escenarios:
+- `scrollWidth == viewport width`;
+- imágenes rotas visibles: 0;
+- errores de página: 0.
+
+Matriz específica: `docs/QA_VISUAL_V86.md`.
 
 ## Publicación y trazabilidad
 
-Regla desde v82:
+Regla vigente:
 
-1. la fuente completa debe existir en GitHub;
-2. debe tener commit recuperable;
-3. el guard de frontend debe pasar;
-4. el SHA de la versión debe quedar documentado;
-5. solo después se considera candidata a Netlify.
+1. fuente completa en GitHub;
+2. commit recuperable;
+3. hashes conocidos;
+4. Frontend guard en verde;
+5. Visual smoke en verde;
+6. solo después, candidata a Netlify.
 
-El conector Netlify disponible actualmente permite desplegar un sitio existente, pero no ofrece una operación para enlazar el sitio manual actual con un repositorio Git. Por eso no se fuerza todavía un deploy de producción que volvería a perder trazabilidad.
+El conector Netlify disponible permite desplegar el sitio existente pero no ofrece una operación para vincular el site manual actual a un repositorio Git. No se fuerza un deploy opaco que vuelva a perder trazabilidad.
 
 ## Pendiente antes de producción
 
-1. QA visual responsive real: móvil, tablet y escritorio.
-2. Login, F5, refresh y logout; vistas Alumna/Admin y cuenta dual-role.
+1. Spot-check adicional en tablet y dispositivo móvil real.
+2. Login, F5, refresh y logout con cuentas reales; vistas Alumna/Admin y cuenta dual-role.
 3. Segunda cuenta real: invitación → activación → primer login → aparición en Admin.
 4. Clase/progreso → entrega → evaluación → feedback → desbloqueo con dos cuentas.
 5. Cambio de cuenta en el mismo navegador para confirmar purga de caché.
 6. Recuperación de contraseña real y redirect desde el origen final autorizado.
-7. Responsable legal y email de privacidad reales.
+7. Responsable legal y email de privacidad definitivos.
 8. Activar/revisar Leaked Password Protection en Supabase Auth.
-9. Enlazar Netlify con GitHub o establecer un mecanismo de publicación equivalente que conserve commit/hash.
-10. Publicar la candidata validada y ejecutar smoke test.
+9. Enlazar Netlify con GitHub o establecer publicación equivalente que conserve commit/hash.
+10. Publicar la candidata validada y ejecutar smoke test contra el dominio final.
 11. Solo después fusionar `develop` a `main`.
