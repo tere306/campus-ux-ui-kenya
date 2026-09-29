@@ -1,0 +1,62 @@
+name: Visual smoke
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'frontend/development-current/index.html'
+      - 'scripts/visual_smoke.mjs'
+      - '.github/workflows/visual-smoke.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'frontend/development-current/index.html'
+      - 'scripts/visual_smoke.mjs'
+      - '.github/workflows/visual-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  visual-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pinned Playwright
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Serve frontend
+        run: |
+          python3 -m http.server 4173 --directory frontend/development-current >/tmp/campus-http.log 2>&1 &
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/campus-http.log
+          exit 1
+
+      - name: Run responsive smoke
+        run: node scripts/visual_smoke.mjs
+
+      - name: Upload QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-smoke-screenshots
+          path: qa-artifacts/
+          if-no-files-found: warn
+          retention-days: 14
