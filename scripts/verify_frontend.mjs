@@ -37,6 +37,9 @@ const checks = [
   ['long labels wrap', html.includes('.btn,.tag,.filter-chip{white-space:normal;overflow-wrap:anywhere}')],
   ['mobile lesson resources stack', html.includes('.lesson-resource{flex-direction:column}')],
   ['legacy v80 marker removed', !html.includes('release v80')],
+  ['no service-role credential marker', !html.includes('service_role')],
+  ['no Supabase secret key marker', !html.includes('sb_secret_')],
+  ['frontend uses publishable Supabase key', html.includes("publishableKey:'sb_publishable_")],
 ];
 
 for (const [label, ok] of checks) {
