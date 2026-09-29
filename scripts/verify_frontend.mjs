@@ -5,6 +5,21 @@ const file = 'frontend/development-current/index.html';
 const html = fs.readFileSync(file, 'utf8');
 const failures = [];
 
+const brandFiles = {
+  'frontend/development-current/zavra-logo-black.png': 'a720dd56c8d5c0e226a239be35a7c4c4ef810f6c1062a6dd7da55e1ecc1f4f1c',
+  'frontend/development-current/zavra-logo-white.png': 'fc16b864bec32a2416d917b75de39091f2fefa4255415524459052db7c21dc18',
+  'frontend/development-current/zavra-logo-black-tagline.png': '5566affb278928c54d7799919c666d67a8d1eb23edd5e550e56f916745540a43',
+};
+
+for (const [brandFile, expectedHash] of Object.entries(brandFiles)) {
+  if (!fs.existsSync(brandFile)) {
+    failures.push(`Missing brand asset: ${brandFile}`);
+    continue;
+  }
+  const actualHash = crypto.createHash('sha256').update(fs.readFileSync(brandFile)).digest('hex');
+  if (actualHash !== expectedHash) failures.push(`Brand asset hash mismatch: ${brandFile}`);
+}
+
 const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<[/]script>/gi)].map((match) => match[1]);
 if (!scripts.length) failures.push('No inline scripts found');
 
@@ -41,6 +56,10 @@ const checks = [
   ['no Supabase secret key marker', !html.includes('sb_secret_')],
   ['frontend uses publishable Supabase key', html.includes("publishableKey:'sb_publishable_")],
   ['mobile profile identity layout', html.includes('/* v84 · perfil móvil con identidad legible */')],
+  ['legacy campus logo removed', !html.includes('campus-logo.webp')],
+  ['dark-surface ZAVRA logo referenced', html.includes('zavra-logo-white.png')],
+  ['light-surface ZAVRA logo referenced', html.includes('zavra-logo-black.png')],
+  ['login ZAVRA tagline logo referenced', html.includes('zavra-logo-black-tagline.png')],
 ];
 
 for (const [label, ok] of checks) {
