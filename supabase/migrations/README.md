@@ -2,7 +2,7 @@
 
 La fuente de verdad actual del historial es Supabase (`pioc-campus`).
 
-El proyecto contiene migraciones desde `initial_pioc_schema` (2026-08-31) hasta los bloques de QA 14O del 2026-09-07.
+El proyecto contiene migraciones desde `initial_pioc_schema` (2026-08-31) hasta los bloques de QA y endurecimiento del 2026-09-07.
 
 Último tramo confirmado:
 - `master_backend_identity_bridge_v14b`
@@ -20,5 +20,36 @@ El proyecto contiene migraciones desde `initial_pioc_schema` (2026-08-31) hasta 
 - `qa_current_attempt_review_order_and_resource_refs_14o`
 - `qa_admin_unique_module_access_count_14o`
 - `qa_submission_evidence_url_scheme_guard_14o`
+- `student_profile_certificate_data_14s`
+- `master_student_profile_certificate_gate_14s`
+- `allow_invite_onboarding_without_legacy_allowlist`
+- `student_invite_admin_workflow_v2`
+- `scope_student_invites_rls_and_reduce_definers`
+- `disable_legacy_public_certificate_verifier`
+- `revoke_anon_public_is_admin_execute`
+- `lock_down_public_is_admin_execute`
+- `lock_down_frontend_asset_storage`
+- `index_student_learning_journal_program_id`
+- `minimize_public_backend_meta_columns`
+- `lock_down_frontend_release_manifests`
+- `bind_invite_enrollment_to_service_validated_code`
+- `revoke_direct_execute_on_private_trigger_functions`
+- `disable_legacy_allowed_email_bootstrap_trigger`
+- `make_admin_create_invite_security_invoker`
+- `reduce_anonymous_table_privileges`
+- `reduce_anonymous_read_surface`
+- `revoke_legacy_private_certificate_verifier`
+- `secure_postgres_anonymous_defaults`
+- `revoke_anonymous_maintain_privilege`
+- `make_legacy_web_bucket_private`
+- `disable_legacy_certificate_issue_revoke_paths`
 
-Las nuevas migraciones SQL se versionarán aquí de forma coordinada con su aplicación en Supabase.
+Las migraciones nuevas aplicadas durante esta sesión se copian a este directorio con el mismo timestamp/nombre que consta en `supabase_migrations.schema_migrations` para que GitHub pueda reconstruir y auditar el backend sin depender únicamente del historial alojado en Supabase.
+
+## Convención de seguridad
+
+Las migraciones del campus se ejecutan como `postgres`. Los privilegios por defecto de ese rol en `public` ya no conceden permisos a `anon` sobre tablas, secuencias o funciones nuevas. Si un objeto debe ser público, el permiso se concede de forma explícita y mínima en su propia migración.
+
+Los defaults internos administrados por la plataforma (`supabase_admin`) no se modifican desde estas migraciones; cualquier objeto de plataforma se revisa por separado y no se considera parte de la superficie pública del campus por defecto.
+
+La emisión/revocación legacy de `program_certificates` se conserva únicamente como código histórico sin `EXECUTE` para `anon` ni `authenticated`. La ruta soportada es la v2 (`student_certificates_v2`), ligada a expediente final y nombre confirmado.

@@ -1,0 +1,14 @@
+{
+  "product": "zavra-campus-master-uxui-web",
+  "frontend_version": 86,
+  "frontend_asset": "development-14zg-visual-polish-index.html",
+  "html_sha256": "61d55f06c7ee1e15c81cb7149314333cd4412be033e1f3eaee88d48960244715",
+  "assets": {
+    "zavra-logo-black.png": "a720dd56c8d5c0e226a239be35a7c4c4ef810f6c1062a6dd7da55e1ecc1f4f1c",
+    "zavra-logo-white.png": "fc16b864bec32a2416d917b75de39091f2fefa4255415524459052db7c21dc18",
+    "zavra-logo-black-tagline.png": "5566affb278928c54d7799919c666d67a8d1eb23edd5e550e56f916745540a43"
+  },
+  "publish_directory": "frontend/development-current",
+  "generated_on": "2026-09-29",
+  "production_target": "fancy-cranachan-c98e89.netlify.app"
+}

@@ -1,0 +1,9 @@
+revoke all on function private.assign_simulation_attempt_no() from public, anon, authenticated;
+revoke all on function private.guard_notification_update() from public, anon, authenticated;
+revoke all on function private.guard_simulation_attempt_update() from public, anon, authenticated;
+revoke all on function private.guard_support_intervention_write() from public, anon, authenticated;
+revoke all on function private.on_auth_user_created_enroll_invite() from public, anon, authenticated;
+revoke all on function private.prepare_support_intervention() from public, anon, authenticated;
+revoke all on function private.set_submission_lineage() from public, anon, authenticated;
+revoke all on function private.sync_student_role_from_enrollment() from public, anon, authenticated;
+revoke all on function private.touch_learning_journal() from public, anon, authenticated;
