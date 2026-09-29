@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<!-- Campus UX/UI · release v80 -->
+<!-- Campus UX/UI · development v83 -->
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="referrer" content="no-referrer" />
 <meta name="robots" content="noindex,nofollow,noarchive" />
@@ -148,7 +148,24 @@ html{scroll-behavior:smooth}body{line-height:1.5;-webkit-font-smoothing:antialia
 .avatar-img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}.profile-photo-editor{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;border:1px solid var(--line);border-radius:16px;padding:16px;background:#fafbfc;margin-top:18px}.profile-photo-preview{width:88px;height:88px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:linear-gradient(135deg,#1c2740,#5749e3);color:#fff;font-size:22px;font-weight:900}.profile-photo-copy{min-width:0}.profile-photo-copy h4{margin:0 0 5px}.profile-photo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.profile-photo-actions input[type=file]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.guide-panel-section{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-top:14px;background:#fafbfc}.guide-panel-section h3{margin:0 0 8px;font-size:16px}.guide-panel-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.lesson-quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}.lesson-quick-actions .btn{min-height:42px}@media(max-width:720px){.profile-photo-editor{grid-template-columns:1fr;text-align:center;justify-items:center}.profile-photo-copy{width:100%}.profile-photo-actions{display:grid;grid-template-columns:1fr;width:100%}.profile-photo-actions .btn{width:100%}.guide-panel-actions{display:grid;grid-template-columns:1fr}.guide-panel-actions .btn,.guide-panel-actions a{width:100%}}
 /* v4.14Q · identidad visual y transición de sesión */
 .brand-logo{display:block;width:min(340px,100%);height:auto;object-fit:contain}.login-brand-logo{width:min(360px,100%);margin:0 0 18px}.top-logo{width:178px;max-height:46px;object-fit:contain}.auth-boot{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#0b1020,#18203b 60%,#635bff 140%);padding:24px;color:#fff;text-align:center}.auth-boot-card{display:grid;justify-items:center;gap:14px}.auth-boot-logo{width:min(360px,78vw);height:auto}.auth-boot-spinner{width:34px;height:34px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:authspin .8s linear infinite}@keyframes authspin{to{transform:rotate(360deg)}}.drawer{backdrop-filter:blur(5px)}.drawer-panel{border-left:1px solid rgba(87,73,227,.12);animation:drawerIn .22s ease-out}@keyframes drawerIn{from{transform:translateX(22px);opacity:.65}to{transform:none;opacity:1}}@media(max-width:720px){.drawer-panel{animation:sheetIn .22s ease-out}@keyframes sheetIn{from{transform:translateY(18px);opacity:.65}to{transform:none;opacity:1}}.top-logo{width:132px;max-height:40px}}@media(prefers-reduced-motion:reduce){.auth-boot-spinner{animation:none}.drawer-panel{animation:none}}
+
+/* v83 · resiliencia de layout y contenido largo */
+html,body{max-width:100%;overflow-x:hidden}
+.main,.pagehead>*,.grid>*,.card>*,.item>*,.item-main>*,.student-summary>*,.admin-mini-grid>*,.review-summary>*,.profile-grid>*,.profile-card-head>*,.lesson-resource>*{min-width:0}
+.card,.item,.item-main,.module-body,.lesson-content,.drawer-panel,.profile-detail,.profile-card-head,.profile-identity-copy,.account-copy,.profile-side-copy,.lesson-resource{overflow-wrap:anywhere}
+.btn,.tag,.filter-chip,.navbtn{max-width:100%}
+.btn,.tag,.filter-chip{white-space:normal;overflow-wrap:anywhere}
+.field input,.field textarea,.field select{width:100%;min-width:0}
+img,svg,video,canvas{max-width:100%}
+.table-wrap{max-width:100%;-webkit-overflow-scrolling:touch}
+@media(max-width:720px){
+ .item,.lesson-resource{align-items:flex-start}
+ .lesson-resource{flex-direction:column}
+ .lesson-resource .btn,.lesson-resource a.btn{width:100%}
+ .pagehead>div,.pagehead>button,.pagehead>a{max-width:100%}
+}
 </style>
+
 </head>
 <body>
 <a class="skip-link" href="#main">Saltar al contenido</a>
