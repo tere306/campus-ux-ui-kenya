@@ -74,6 +74,8 @@ const checks = [
   ['dark-surface ZAVRA logo referenced', html.includes('zavra-logo-white.png')],
   ['light-surface ZAVRA logo referenced', html.includes('zavra-logo-black.png')],
   ['login ZAVRA tagline logo referenced', html.includes('zavra-logo-black-tagline.png')],
+  ['v86 visual polish marker', html.includes('/* v86 · pulido visual tras QA real */')],
+  ['no escaped newline between auth boot and login', !html.includes('</div></div>\\\\n<div id="login"')],
 ];
 
 for (const [label, ok] of checks) {
