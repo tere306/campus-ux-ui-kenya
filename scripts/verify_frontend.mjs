@@ -20,6 +20,20 @@ for (const [brandFile, expectedHash] of Object.entries(brandFiles)) {
   if (actualHash !== expectedHash) failures.push(`Brand asset hash mismatch: ${brandFile}`);
 }
 
+const publishDir = 'frontend/development-current';
+const localAssetRefs = [...html.matchAll(/\\bsrc=(['"])([^'"]+)\\1/gi)]
+  .map((match) => match[2])
+  .filter((ref) => !/^(?:https?:|data:|blob:|\\/\\/)/i.test(ref) && !ref.includes('${'));
+
+for (const ref of new Set(localAssetRefs)) {
+  const assetPath = `${publishDir}/${ref.replace(/^\\.\\//, '')}`;
+  if (!fs.existsSync(assetPath)) failures.push(`Missing local asset referenced by HTML: ${assetPath}`);
+}
+
+for (const requiredFile of [`${publishDir}/_headers`, `${publishDir}/_redirects`]) {
+  if (!fs.existsSync(requiredFile)) failures.push(`Missing publish control file: ${requiredFile}`);
+}
+
 const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<[/]script>/gi)].map((match) => match[1]);
 if (!scripts.length) failures.push('No inline scripts found');
 
