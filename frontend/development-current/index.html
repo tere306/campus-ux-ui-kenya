@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<!-- Campus UX/UI · development v83 -->
+<!-- Campus UX/UI · development v84 -->
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="referrer" content="no-referrer" />
 <meta name="robots" content="noindex,nofollow,noarchive" />
@@ -164,7 +164,16 @@ img,svg,video,canvas{max-width:100%}
  .lesson-resource .btn,.lesson-resource a.btn{width:100%}
  .pagehead>div,.pagehead>button,.pagehead>a{max-width:100%}
 }
+
+/* v84 · perfil móvil con identidad legible */
+@media(max-width:720px){
+ .profile-identity{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start}
+ .profile-identity>.tag{grid-column:1/-1;justify-self:start}
+ .profile-identity-copy{width:100%}
+ .profile-identity-copy h2{overflow-wrap:normal;word-break:normal}
+}
 </style>
+
 
 </head>
 <body>
