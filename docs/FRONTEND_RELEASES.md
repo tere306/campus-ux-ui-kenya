@@ -6,7 +6,7 @@ Este archivo registra los artefactos de frontend conservados fuera del deploy p�
 
 - Hosting: Netlify
 - sitio: `fancy-cranachan-c98e89`
-- deploy actual: `6a9e8ed5b2c90359c1b8081d`
+- deploy actual: `6aa2b472eea4967d3570df63`
 - tipo de deploy: manual / `drop`
 - release registrada en `academy_frontend_releases`: v14
 - `source_sha256`: `7e97173d39f5cf70d6994c4ad7b83f20046cb319d1993ce9e3ab6e8`
@@ -102,7 +102,53 @@ El alias `development-current-index.html` siempre debe apuntar al artefacto de d
 - el estado embebido del currículo queda alineado con Supabase (`published`).
 - se retira copy operativo obsoleto sobre login/admin provisional y se aclara la dependencia real de la copia local.
 - QA estructural: 143/143 botones, 5/5 formularios, cierre HTML correcto; solo queda `status:'draft'` en el estado real de un borrador de entrega.
-- estado: desarrollo actual.
+- estado: histórico; superado por la línea v65–v86.
+
+
+### v81
+
+- asset: `development-14zb-control-operativo-fit-index.html`
+- SHA-256: `d69ebd3ba1b7b3eb189a66b57c9e2e3daadc791052ec2b48ad1a3fd589d51802`
+- baseline de control operativo previo a la sincronización completa con GitHub.
+
+### v82
+
+- asset: `development-14zc-safe-lesson-render-profile-sync-index.html`
+- SHA-256: `35bf4442e38b2a7db47cc505bb6ec3641b11ea4ff007ad5989aa91aaa10e4b35`
+- sincroniza la identidad visible del perfil con certificación;
+- escapa contenido dinámico de lecciones antes de insertarlo en HTML.
+
+### v83
+
+- asset: `development-14zd-layout-resilience-index.html`
+- SHA-256: `150e5440c78613efc53dd01fdb4d37533a0337ef220f8943195310898b807292`
+- resiliencia de layout ante etiquetas, nombres, botones y recursos largos;
+- elimina el marcador interno obsoleto v80.
+
+### v84
+
+- asset: `development-14ze-mobile-profile-identity-index.html`
+- SHA-256: `a62a39295cd8ec9402ab60d11085013968059576413880c4bfce1c11a277cac4`
+- compone la identidad móvil del perfil en dos niveles para nombres extensos.
+
+### v85
+
+- asset: `development-14zf-zavra-brand-assets-index.html`
+- SHA-256: `a5e3563465c8c65caeb13b89439016f92508e5844fd3be670ecec6cb62aab134`
+- elimina `campus-logo.webp`;
+- integra y versiona los tres logos oficiales ZAVRA;
+- Frontend guard verifica sus hashes maestros.
+
+### v86
+
+- asset: `development-14zg-visual-polish-index.html`
+- alias: `development-current-index.html`
+- SHA-256: `61d55f06c7ee1e15c81cb7149314333cd4412be033e1f3eaee88d48960244715`
+- tamaño: 736.491 caracteres;
+- elimina la secuencia `\\n` que se mostraba como texto sobre la interfaz;
+- corrige la etiqueta de estado de certificación en móvil;
+- Visual smoke: 28/28 escenarios PASS, 0 overflow global, 0 imágenes rotas, 0 errores de página;
+- estado: **desarrollo actual**.
 
 ## Regla de publicación
 
