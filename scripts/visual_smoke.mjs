@@ -17,8 +17,10 @@ const scenarios = [
 ];
 
 const viewports = [
+  { name: 'mobile-320', width: 320, height: 800 },
+  { name: 'mobile-390', width: 390, height: 844 },
+  { name: 'tablet', width: 768, height: 1024 },
   { name: 'desktop', width: 1440, height: 1000 },
-  { name: 'mobile', width: 390, height: 844 },
 ];
 
 async function injectMockSession(page, mode, pageName) {
@@ -66,8 +68,8 @@ async function injectMockSession(page, mode, pageName) {
   }, { mode, pageName });
 }
 
-async function measure(page) {
-  return page.evaluate(() => {
+async function measure(page, mode) {
+  return page.evaluate((mode) => {
     const root = document.documentElement;
     const body = document.body;
     const innerWidth = window.innerWidth;
@@ -109,6 +111,32 @@ async function measure(page) {
       })
       .map((img) => ({ src: img.getAttribute('src') || '', alt: img.alt || '' }));
 
+    const isVisible = (el) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const style = getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    };
+
+    const ids = [...document.querySelectorAll('[id]')].map((el) => el.id).filter(Boolean);
+    const duplicateIds = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
+
+    const unlabeledControls = [...document.querySelectorAll('input, textarea, select')]
+      .filter((el) => {
+        if (!isVisible(el)) return false;
+        if (el instanceof HTMLInputElement && ['hidden', 'button', 'submit', 'reset', 'image'].includes(el.type)) return false;
+        if (el.getAttribute('aria-label')?.trim()) return false;
+        if (el.getAttribute('aria-labelledby')?.trim()) return false;
+        if (el.closest('label')) return false;
+        if (el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`)) return false;
+        return true;
+      })
+      .map((el) => ({ tag: el.tagName.toLowerCase(), id: el.id || '', name: el.getAttribute('name') || '' }));
+
+    const heading = mode === 'login'
+      ? [...document.querySelectorAll('.login h1')].find(isVisible)
+      : [...document.querySelectorAll('#main h1')].find(isVisible);
+
     return {
       innerWidth,
       scrollWidth,
@@ -116,10 +144,12 @@ async function measure(page) {
       offenders,
       visibleCards,
       brokenImages,
+      duplicateIds,
+      unlabeledControls,
       title: document.title,
-      h1: document.querySelector('#main h1, .login h1')?.textContent?.trim() || '',
+      h1: heading?.textContent?.trim() || '',
     };
-  });
+  }, mode);
 }
 
 for (const viewport of viewports) {
@@ -150,7 +180,7 @@ for (const viewport of viewports) {
         await page.waitForTimeout(80);
       }
 
-      const metrics = await measure(page);
+      const metrics = await measure(page, scenario.mode);
       const label = `${scenario.mode}-${pageName}-${viewport.name}`;
       const screenshotPath = path.join(outDir, `${label}.png`);
       await page.screenshot({ path: screenshotPath, fullPage: true });
@@ -167,7 +197,13 @@ for (const viewport of viewports) {
       if (metrics.brokenImages.length) {
         failures.push(`${label}: broken visible images: ${JSON.stringify(metrics.brokenImages)}`);
       }
-      if (scenario.mode !== 'login' && !metrics.h1) {
+      if (metrics.duplicateIds.length) {
+        failures.push(`${label}: duplicate IDs: ${metrics.duplicateIds.join(', ')}`);
+      }
+      if (metrics.unlabeledControls.length) {
+        failures.push(`${label}: visible form controls without accessible label: ${JSON.stringify(metrics.unlabeledControls)}`);
+      }
+      if (!metrics.h1) {
         failures.push(`${label}: missing page heading`);
       }
 
@@ -180,7 +216,7 @@ await browser.close();
 fs.writeFileSync(path.join(outDir, 'visual-smoke-results.json'), JSON.stringify(results, null, 2));
 
 for (const result of results) {
-  console.log(`${result.label}: width=${result.innerWidth}, scrollWidth=${result.scrollWidth}, cards=${result.visibleCards}, brokenImages=${result.brokenImages.length}, h1="${result.h1}"`);
+  console.log(`${result.label}: width=${result.innerWidth}, scrollWidth=${result.scrollWidth}, cards=${result.visibleCards}, brokenImages=${result.brokenImages.length}, duplicateIds=${result.duplicateIds.length}, unlabeledControls=${result.unlabeledControls.length}, h1="${result.h1}"`);
 }
 
 if (failures.length) {
