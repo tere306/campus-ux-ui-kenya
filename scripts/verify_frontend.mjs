@@ -21,15 +21,15 @@ for (const [brandFile, expectedHash] of Object.entries(brandFiles)) {
 }
 
 const publishDir = 'frontend/development-current';
-const localAssetRefs = [...html.matchAll(/\\bsrc=(['"])([^'"]+)\\1/gi)]
+const localAssetRefs = [...html.matchAll(/\bsrc=(['"])([^'"]+)\1/gi)]
   .map((match) => match[2])
-  .filter((ref) => !/^(?:https?:|data:|blob:|\\/\\/)/i.test(ref) && !ref.includes('${'));
+  .filter((ref) => !['http:', 'https:', 'data:', 'blob:', '//'].some((prefix) => ref.toLowerCase().startsWith(prefix)) && !ref.includes('${'));
 
 for (const ref of new Set(localAssetRefs)) {
-  const assetPath = `${publishDir}/${ref.replace(/^\\.\\//, '')}`;
+  const cleanRef = ref.startsWith('./') ? ref.slice(2) : ref;
+  const assetPath = `${publishDir}/${cleanRef}`;
   if (!fs.existsSync(assetPath)) failures.push(`Missing local asset referenced by HTML: ${assetPath}`);
 }
-
 for (const requiredFile of [`${publishDir}/_headers`, `${publishDir}/_redirects`]) {
   if (!fs.existsSync(requiredFile)) failures.push(`Missing publish control file: ${requiredFile}`);
 }
@@ -75,7 +75,7 @@ const checks = [
   ['light-surface ZAVRA logo referenced', html.includes('zavra-logo-black.png')],
   ['login ZAVRA tagline logo referenced', html.includes('zavra-logo-black-tagline.png')],
   ['v86 visual polish marker', html.includes('/* v86 · pulido visual tras QA real */')],
-  ['no escaped newline between auth boot and login', !html.includes('</div></div>\\\\n<div id="login"')],
+  ['no escaped newline between auth boot and login', !html.includes('</div></div>\\n<div id="login"')],
 ];
 
 for (const [label, ok] of checks) {
