@@ -40,6 +40,7 @@ const checks = [
   ['no service-role credential marker', !html.includes('service_role')],
   ['no Supabase secret key marker', !html.includes('sb_secret_')],
   ['frontend uses publishable Supabase key', html.includes("publishableKey:'sb_publishable_")],
+  ['mobile profile identity layout', html.includes('/* v84 · perfil móvil con identidad legible */')],
 ];
 
 for (const [label, ok] of checks) {
